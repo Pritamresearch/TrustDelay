@@ -38,7 +38,8 @@ def train_trustdelay():
     metrics_log = []
 
     print("\nStarting Training Loop...")
-    for epoch in range(1, cfg.epochs + 1):
+    num_epochs = 5
+    for epoch in range(1, num_epochs + 1):
         model.train()
         total_loss = 0.0
         total_cls = 0.0
@@ -50,8 +51,8 @@ def train_trustdelay():
         epoch_delay = int(torch.randint(0, 6, (1,)).item() * 100)
         train_dataset.set_delay_ms(epoch_delay)
 
-        # Train on subset/full for fast convergence
-        sample_indices = torch.randperm(len(train_dataset))[:min(100, len(train_dataset))]
+        # Train on 50 samples per epoch for steady gradient updates
+        sample_indices = torch.randperm(len(train_dataset))[:min(50, len(train_dataset))]
 
         for idx in sample_indices:
             sample = train_dataset[idx.item()]

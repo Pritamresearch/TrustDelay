@@ -242,15 +242,15 @@ class OPV2VAsynchronousDataset(Dataset):
                     gt_is_moving.append(spd > self.cfg.moving_velocity_thresh)
 
         # Process collaborators with latency Delta_t
-        # OPV2V sequences are at 10 Hz (100 ms per step).
-        # Latency frame lag: k_delay = round(delay_ms / 100)
-        frame_lag = int(round(self.delay_ms / 100.0))
+        # OPV2V sequence frames are recorded at 30 Hz (33.3 ms per index step).
+        # Latency frame lag: k_delay = round(delay_ms / 33.333)
+        frame_lag = int(round(self.delay_ms / 33.333))
         collab_data = []
 
         for c_id in collab_ids:
             collab_idx = max(0, t_idx - frame_lag)
             collab_ts = timestamps[collab_idx]
-            actual_delay_ms = (t_idx - collab_idx) * 100.0
+            actual_delay_ms = (t_idx - collab_idx) * 33.333
 
             c_yaml_path = os.path.join(seq_dir, c_id, f"{collab_ts}.yaml")
             if not os.path.exists(c_yaml_path):

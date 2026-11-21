@@ -80,6 +80,10 @@ class ReliabilityWeightedFusion(nn.Module):
         self.cls_head = nn.Linear(feat_dim, 1)   # vehicle presence logit
         self.reg_head = nn.Linear(feat_dim, 7)   # refined box [cx, cy, cz, dx, dy, dz, yaw]
 
+        # Standard zero-initialization for bounding box regression residual head
+        nn.init.zeros_(self.reg_head.weight)
+        nn.init.zeros_(self.reg_head.bias)
+
     def forward(
         self,
         ego_queries: torch.Tensor,          # (B, N_ego, C)
@@ -104,7 +108,12 @@ class ReliabilityWeightedFusion(nn.Module):
         if M == 0:
             # No collaborators selected or available: ego-only fallback
             logits = self.cls_head(ego_queries)
-            refined_boxes = ego_boxes + self.reg_head(ego_queries)
+            res = self.reg_head(ego_queries)
+            refined_boxes = torch.cat([
+                ego_boxes[:, :, :3] + res[:, :, :3],
+                ego_boxes[:, :, 3:6] * torch.exp(torch.clamp(res[:, :, 3:6], -1.0, 1.0)),
+                ego_boxes[:, :, 6:7] + res[:, :, 6:7]
+            ], dim=-1)
             return {
                 "fused_queries": ego_queries,
                 "pred_logits": logits.squeeze(-1),
@@ -140,7 +149,11 @@ class ReliabilityWeightedFusion(nn.Module):
         # Predict detection scores and refined 3D bounding boxes
         pred_logits = self.cls_head(fused_queries).squeeze(-1)
         box_residuals = self.reg_head(fused_queries)
-        refined_boxes = ego_boxes + box_residuals
+        refined_boxes = torch.cat([
+            ego_boxes[:, :, :3] + box_residuals[:, :, :3],
+            ego_boxes[:, :, 3:6] * torch.exp(torch.clamp(box_residuals[:, :, 3:6], -1.0, 1.0)),
+            ego_boxes[:, :, 6:7] + box_residuals[:, :, 6:7]
+        ], dim=-1)
 
         return {
             "fused_queries": fused_queries,

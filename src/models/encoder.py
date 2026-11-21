@@ -97,14 +97,24 @@ class QueryGenerator(nn.Module):
         idx_expanded_box = top_indices.unsqueeze(-1).expand(-1, -1, 7)
 
         queries = torch.gather(flat_feat, 1, idx_expanded_feat)
-        query_boxes = torch.gather(flat_boxes, 1, idx_expanded_box)
+        raw_boxes = torch.gather(flat_boxes, 1, idx_expanded_box)
 
-        # Re-center coordinates in metric ego frame:
+        # Re-center coordinates in metric ego frame (out-of-place)
         # row index (top_indices // W) corresponds to metric X (forward)
         # col index (top_indices % W) corresponds to metric Y (lateral)
         xs = (top_indices // W).float() / float(H) * 100.0 - 50.0
         ys = (top_indices % W).float() / float(W) * 100.0 - 50.0
-        query_boxes[:, :, 0] += xs
-        query_boxes[:, :, 1] += ys
+
+        cx = raw_boxes[:, :, 0:1] + xs.unsqueeze(-1)
+        cy = raw_boxes[:, :, 1:2] + ys.unsqueeze(-1)
+        cz = raw_boxes[:, :, 2:3]
+
+        # Vehicle 3D anchor dimension priors (OPV2V average: dx=4.6m, dy=2.1m, dz=1.6m)
+        dx = torch.exp(torch.clamp(raw_boxes[:, :, 3:4], -1.5, 1.5)) * 4.6
+        dy = torch.exp(torch.clamp(raw_boxes[:, :, 4:5], -1.5, 1.5)) * 2.1
+        dz = torch.exp(torch.clamp(raw_boxes[:, :, 5:6], -1.5, 1.5)) * 1.6
+        yaw = raw_boxes[:, :, 6:7]
+
+        query_boxes = torch.cat([cx, cy, cz, dx, dy, dz, yaw], dim=-1)
 
         return queries, query_boxes, top_scores

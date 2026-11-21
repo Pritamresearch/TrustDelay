@@ -51,6 +51,14 @@ class MotionExtrapolator(nn.Module):
             nn.ReLU(inplace=True)
         )
 
+        # Standard zero-initialization for residual heads (ensures clean initialization at baseline)
+        nn.init.zeros_(self.delta_pos_head.weight)
+        nn.init.zeros_(self.delta_pos_head.bias)
+        nn.init.zeros_(self.uncertainty_head[2].weight)
+        nn.init.zeros_(self.uncertainty_head[2].bias)
+        nn.init.zeros_(self.kinematics_head.weight)
+        nn.init.zeros_(self.kinematics_head.bias)
+
     def forward(
         self,
         query_feats: torch.Tensor,       # (B, N, C)
@@ -99,8 +107,8 @@ class MotionExtrapolator(nn.Module):
 
         # Predict learned kinematics & residuals
         kin_preds = self.kinematics_head(h)  # [vx, vy, ax, ay]
-        pred_vx = kin_preds[:, :, 0:1]
-        pred_vy = kin_preds[:, :, 1:2]
+        pred_vx = kin_preds[:, :, 0:1] + init_vx
+        pred_vy = kin_preds[:, :, 1:2] + init_vy
         pred_ax = kin_preds[:, :, 2:3]
         pred_ay = kin_preds[:, :, 3:4]
 

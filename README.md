@@ -1,11 +1,14 @@
 # TrustDelay: Uncertainty-Aware Asynchronous Cooperative Perception under Communication Constraints
 
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.5%2B-ee4c2c.svg)](https://pytorch.org/)
+[![Paper](https://img.shields.io/badge/Paper-IEEE%20Format%20PDF-red.svg)](./paper/main.pdf)
 [![Hardware](https://img.shields.io/badge/GPU-RTX%203050%20Laptop%206GB-76b900.svg)](https://www.nvidia.com/)
 [![Benchmark](https://img.shields.io/badge/Dataset-OPV2V%20Benchmark-blue.svg)](https://github.com/DerrickXuNu/OpenCOOD)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-Official PyTorch implementation of **TrustDelay**, a unified uncertainty-aware asynchronous cooperative 3D object detection framework designed for Connected and Autonomous Vehicles (CAVs) under realistic communication delay, packet drop, pose noise, and bandwidth constraints.
+Official PyTorch implementation and research manuscript for **TrustDelay**, a unified uncertainty-aware asynchronous cooperative 3D object detection framework designed for Connected and Autonomous Vehicles (CAVs) under realistic communication delay, packet drop, pose noise, and bandwidth constraints.
+
+> **Research Manuscript:** Complete 7-page IEEE Transactions format paper with full mathematical derivations, benchmark tables, and architecture diagrams is available at [`paper/main.tex`](./paper/main.tex) (compiled PDF: [`paper/main.pdf`](./paper/main.pdf)).
 
 ---
 

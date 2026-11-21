@@ -1,11 +1,14 @@
 """
 TrustDelay: Complete Unified Multi-Agent Architecture.
 Integrates all 5 modules:
-  1. Ego Perception Encoder
+  1. Ego Perception Encoder & Query Generator
   2. Collaborator Selector
   3. Uncertainty-Aware Motion Extrapolator
   4. Bandwidth-Aware Message Selector
   5. Reliability-Weighted Asynchronous Fusion
+
+Strictly leak-free: All proposals and queries are produced by the neural network from LiDAR point clouds.
+Ground truth is never read, passed, or injected into any network tensor.
 """
 from __future__ import annotations
 import math
@@ -65,14 +68,15 @@ class TrustDelayModel(nn.Module):
         fusion_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        End-to-End Inference / Forward Pass.
+        Pure neural inference pipeline.
+        Inputs: Sensor point-cloud BEV tensors and SE(3) poses only.
         """
         device = next(self.encoder.parameters()).device
         extrap_mode = extrapolation_mode or self.cfg.extrapolation_mode
-        fuse_mode = fusion_type or self.cfg.fusion_type
+        fuse_mode = fusion_type or "attention"
 
         # -------------------------------------------------------------
-        # Module 1: Ego Perception Encoding
+        # Module 1: Ego Perception Encoding & Proposal Generation
         # -------------------------------------------------------------
         ego_bev_raw = batch["ego_bev"].to(device)
         if ego_bev_raw.dim() == 3:
@@ -81,23 +85,11 @@ class TrustDelayModel(nn.Module):
         ego_bev_feat = self.encoder(ego_bev_raw)
         ego_queries, ego_boxes, ego_scores = self.query_gen(ego_bev_feat)
 
-        # Integrate visible ego proposals (vehicles within 25m line of sight)
-        if "gt_boxes" in batch and len(batch["gt_boxes"]) > 0:
-            gt_b = batch["gt_boxes"].to(device).float()
-            dist_e = torch.norm(gt_b[:, :2], dim=-1)
-            vis = dist_e < 25.0
-            if vis.sum() > 0:
-                e_prop = gt_b[vis]
-                n_e = min(len(e_prop), ego_boxes.shape[1])
-                ego_boxes = torch.cat([e_prop[:n_e, :7].unsqueeze(0), ego_boxes[:, n_e:]], dim=1)
-                ego_scores = torch.cat([torch.ones((1, n_e), device=device) * 0.95, ego_scores[:, n_e:]], dim=1)
-
         # -------------------------------------------------------------
         # Module 2: Collaborator Selection
         # -------------------------------------------------------------
         collabs_raw = batch.get("collabs", [])
-        if not collabs_raw:
-            # Fallback to Ego-Only
+        if not collabs_raw or fuse_mode == "ego_only":
             fuse_res = self.fusion(
                 ego_queries=ego_queries,
                 ego_boxes=ego_boxes,
@@ -114,14 +106,15 @@ class TrustDelayModel(nn.Module):
                 "pred_boxes": fuse_res["pred_boxes"],
                 "transmitted_kb": 0.0,
                 "selected_collabs": [],
-                "extrapolated_boxes": torch.empty((1, 0, 7), device=device)
+                "extrapolated_boxes": torch.empty((1, 0, 7), device=device),
+                "log_var": None
             }
 
         selected_indices, collab_scores = self.collab_selector(collabs_raw)
         selected_collabs = [collabs_raw[i] for i in selected_indices]
 
         # -------------------------------------------------------------
-        # Module 3 & 4: Collaborator Processing, Extrapolation & Budget
+        # Modules 3 & 4: Collaborator Processing, Extrapolation & Budget
         # -------------------------------------------------------------
         gathered_collab_feats = []
         gathered_collab_boxes = []
@@ -135,41 +128,23 @@ class TrustDelayModel(nn.Module):
         p_loss = packet_loss_override if packet_loss_override is not None else self.cfg.default_packet_loss
 
         for c_info in selected_collabs:
-            # Latency for this collaborator
             if delay_override_ms is not None:
                 delay_ms = delay_override_ms
             else:
                 delay_ms = float(c_info.get("delay_ms", 0.0))
             delay_sec_val = delay_ms / 1000.0
 
-            # Encode collaborator local BEV
+            # Encode collaborator local BEV using shared encoder
             c_bev_np = c_info["bev_features"]
             c_bev_tensor = torch.from_numpy(c_bev_np).unsqueeze(0).to(device)
             c_bev_feat = self.encoder(c_bev_tensor)
+            # Generate proposals in collaborator frame purely from sensor features
             c_queries, c_local_boxes, c_scores = self.query_gen(c_bev_feat)
-
-            # Integrate collaborator local detection proposals
-            c_prop_raw = c_info.get("local_boxes", [])
-            initial_v = None
-            if len(c_prop_raw) > 0:
-                c_prop_t = torch.from_numpy(np.array(c_prop_raw)).to(device).float()
-                n_c = min(len(c_prop_t), c_local_boxes.shape[1])
-                c_local_boxes = torch.cat([c_prop_t[:n_c, :7].unsqueeze(0), c_local_boxes[:, n_c:]], dim=1)
-                c_scores = torch.cat([torch.ones((1, n_c), device=device) * 0.95, c_scores[:, n_c:]], dim=1)
-
-                # Velocities in collaborator frame [vx, vy]
-                c_spds = c_prop_t[:n_c, 7:8]
-                c_yaws = c_prop_t[:n_c, 6:7]
-                vx = c_spds * torch.cos(c_yaws)
-                vy = c_spds * torch.sin(c_yaws)
-                v_prop = torch.cat([vx, vy], dim=-1).unsqueeze(0)
-                initial_v = torch.zeros((1, c_local_boxes.shape[1], 2), device=device)
-                initial_v[:, :n_c] = v_prop
 
             # Spatial Alignment: Transform collaborator queries into ego frame
             T_ego_collab = c_info["T_ego_collab"].copy()
 
-            # Inject Pose Noise if testing localization robustness
+            # Apply GPS/IMU Pose Noise perturbation if specified
             pose_noise_mag_val = 0.0
             if pose_noise_trans > 0.0 or pose_noise_rot > 0.0:
                 t_noise = np.random.normal(0.0, pose_noise_trans, size=(3,))
@@ -177,19 +152,14 @@ class TrustDelayModel(nn.Module):
                 pose_noise_mag_val = float(np.linalg.norm(t_noise) + abs(r_noise))
                 T_ego_collab[0, 3] += t_noise[0]
                 T_ego_collab[1, 3] += t_noise[1]
-                # Rotate yaw
                 c_yaw, s_yaw = math.cos(r_noise), math.sin(r_noise)
                 R_noise_2d = np.array([[c_yaw, -s_yaw], [s_yaw, c_yaw]])
                 T_ego_collab[:2, :2] = R_noise_2d @ T_ego_collab[:2, :2]
 
-            # Transform candidate 3D centers and yaw into ego frame (out-of-place)
+            # Transform 3D candidate centers into ego frame
             pts_c = torch.cat([c_local_boxes[:, :, :3], torch.ones_like(c_local_boxes[:, :, :1])], dim=-1)
             T_tensor = torch.from_numpy(T_ego_collab).float().to(device)
             pts_ego = torch.matmul(pts_c, T_tensor.T)[:, :, :3]
-
-            # Rotate velocity into ego frame
-            if initial_v is not None:
-                initial_v = torch.matmul(initial_v, T_tensor[:2, :2].T)
 
             collab_yaw_offset = math.atan2(T_ego_collab[1, 0], T_ego_collab[0, 0])
             c_yaw_in_ego = c_local_boxes[:, :, 6:7] + collab_yaw_offset
@@ -199,14 +169,14 @@ class TrustDelayModel(nn.Module):
                 c_yaw_in_ego
             ], dim=-1)
 
-            # Module 3: Uncertainty-Aware Motion Extrapolation
+            # Module 3: Uncertainty-Aware Motion Extrapolation (Learned from features)
             delay_sec_tensor = torch.tensor([[[delay_sec_val]]], device=device)
             extrap_dict = self.motion_extrapolator(
                 query_feats=c_queries,
                 delayed_boxes=c_boxes_in_ego,
                 delay_sec=delay_sec_tensor,
                 mode=extrap_mode,
-                initial_vel=initial_v
+                initial_vel=None  # Learned velocity from features, zero GT leakage
             )
             extrap_boxes = extrap_dict["extrapolated_boxes"]
             extrap_feats = extrap_dict["extrapolated_feats"]
@@ -267,21 +237,9 @@ class TrustDelayModel(nn.Module):
             fusion_type=fuse_mode
         )
 
-        # Fused multi-agent output: combine refined ego predictions with extrapolated collaborator proposals
-        if collab_boxes_cat.shape[1] > 0:
-            final_pred_boxes = torch.cat([fuse_res["pred_boxes"], collab_boxes_cat], dim=1)
-            # Scores for collaborator boxes are scaled by reliability weights
-            rel_weights = fuse_res.get("reliability_weights", torch.ones_like(collab_boxes_cat[:, :, 0]))
-            collab_scores = torch.clamp(rel_weights * 0.95, min=0.01, max=0.98)
-            collab_logits = torch.log(collab_scores / (1.0 - collab_scores))
-            final_pred_logits = torch.cat([fuse_res["pred_logits"], collab_logits], dim=1)
-        else:
-            final_pred_boxes = fuse_res["pred_boxes"]
-            final_pred_logits = fuse_res["pred_logits"]
-
         return {
-            "pred_logits": final_pred_logits,
-            "pred_boxes": final_pred_boxes,
+            "pred_logits": fuse_res["pred_logits"],
+            "pred_boxes": fuse_res["pred_boxes"],
             "reliability_weights": fuse_res.get("reliability_weights", None),
             "transmitted_kb": total_comm_kb,
             "selected_collabs": selected_indices,

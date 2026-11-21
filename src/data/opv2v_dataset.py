@@ -1,7 +1,8 @@
 """
 OPV2V Asynchronous Cooperative Perception Dataset Loader.
-Supports continuous time sequences, asynchronous frame pairing at arbitrary latency Delta_t,
+Supports continuous time sequences, asynchronous frame pairing at verified 10 Hz frame rate (100 ms/frame),
 multi-agent pose transforms, 3D bounding box extraction in ego frame, and moving/stationary labels.
+Strictly leak-free: Collaborators transmit only sensor representations and spatial poses (no ground truth).
 """
 from __future__ import annotations
 import os
@@ -43,7 +44,6 @@ def x_to_world(cords: List[float]) -> np.ndarray:
     matrix[2, 2] = c_p * c_r
     return matrix
 
-
 def parse_pcd_points(path: str, max_points: int = 15000) -> np.ndarray:
     """
     Parse ASCII/Binary PCD file without heavy third-party dependencies.
@@ -73,7 +73,6 @@ def parse_pcd_points(path: str, max_points: int = 15000) -> np.ndarray:
             pts = np.frombuffer(pts_raw, dtype=np.float32)
             pts = pts.reshape(-1, 4)[:, :3]  # x, y, z, intensity -> x, y, z
         else:
-            # ASCII parser
             pts_list = []
             for i in range(data_start_idx, min(len(lines), data_start_idx + max_points)):
                 parts = lines[i].split()
@@ -88,7 +87,6 @@ def parse_pcd_points(path: str, max_points: int = 15000) -> np.ndarray:
     except Exception:
         return np.zeros((0, 3), dtype=np.float32)
 
-
 def points_to_bev_features(
     pts: np.ndarray,
     x_range: Tuple[float, float] = (-50.0, 50.0),
@@ -99,7 +97,7 @@ def points_to_bev_features(
 ) -> np.ndarray:
     """
     Convert 3D point cloud into compact pseudo-pillar BEV feature representation (C, H, W).
-    Channels: [occupancy_count, max_z, mean_z, intensity/density]
+    Channels: [density, max_z, mean_z, occupancy_flag]
     """
     bev = np.zeros((num_channels, grid_size[0], grid_size[1]), dtype=np.float32)
     if len(pts) == 0:
@@ -114,7 +112,6 @@ def points_to_bev_features(
     if len(valid_pts) == 0:
         return bev
 
-    # Normalize coordinates to grid
     xi = np.floor((valid_pts[:, 0] - x_range[0]) / (x_range[1] - x_range[0]) * grid_size[0]).astype(np.int64)
     yi = np.floor((valid_pts[:, 1] - y_range[0]) / (y_range[1] - y_range[0]) * grid_size[1]).astype(np.int64)
 
@@ -125,23 +122,22 @@ def points_to_bev_features(
         x_idx = xi[i]
         y_idx = yi[i]
         z_val = valid_pts[i, 2]
-        bev[0, x_idx, y_idx] += 1.0  # count
-        bev[1, x_idx, y_idx] = max(bev[1, x_idx, y_idx], z_val)  # max_z
-        bev[2, x_idx, y_idx] += z_val  # sum_z (divided later)
+        bev[0, x_idx, y_idx] += 1.0
+        bev[1, x_idx, y_idx] = max(bev[1, x_idx, y_idx], z_val)
+        bev[2, x_idx, y_idx] += z_val
 
-    # Normalize
     counts = bev[0:1].copy()
     valid_cells = counts > 0
     bev[2:3] = np.where(valid_cells, bev[2:3] / np.maximum(counts, 1.0), 0.0)
-    bev[0:1] = np.log1p(bev[0:1]) / 3.0  # log-scaled density
-    bev[3:4] = np.where(valid_cells, 1.0, 0.0)  # binary occupancy mask
+    bev[0:1] = np.log1p(bev[0:1]) / 3.0
+    bev[3:4] = np.where(valid_cells, 1.0, 0.0)
     return bev
-
 
 class OPV2VAsynchronousDataset(Dataset):
     """
     Continuous Asynchronous Multi-Agent Dataset for OPV2V.
     Simulates physical communication delay Delta_t between ego and surrounding CAVs.
+    Verified frame rate: 10 Hz (100 ms per step).
     """
     def __init__(self, cfg, split: str = "train", delay_ms: int = 0):
         super().__init__()
@@ -153,8 +149,7 @@ class OPV2VAsynchronousDataset(Dataset):
             raise FileNotFoundError(f"Split directory not found: {self.split_dir}")
 
         self.sequences = sorted(glob.glob(os.path.join(self.split_dir, "*")))
-        self.samples = []  # (seq_path, ego_id, [collab_ids], frame_idx, timestamps)
-        
+        self.samples = []
         self._build_index()
 
     def set_delay_ms(self, delay_ms: int):
@@ -220,37 +215,33 @@ class OPV2VAsynchronousDataset(Dataset):
         gt_is_moving = []
         if "vehicles" in ego_yaml:
             for v_id, v_info in ego_yaml["vehicles"].items():
-                loc = v_info["location"]  # world (x, y, z)
-                extent = v_info["extent"]  # (dx, dy, dz)
-                angle = v_info["angle"]    # (roll, yaw, pitch)
-                spd = float(v_info.get("speed", 0.0))
+                loc = v_info["location"]
+                extent = v_info["extent"]
+                angle = v_info["angle"]
+                spd = float(v_info.get("speed", 0.0)) / 3.6  # convert km/h to m/s
 
                 # Transform center to ego frame
                 pt_w = np.array([loc[0], loc[1], loc[2], 1.0], dtype=np.float32)
                 pt_ego = (T_ego_world @ pt_w)[:3]
 
-                # Check if within detection range
+                # Filter within perception boundary
                 if (self.cfg.x_min <= pt_ego[0] <= self.cfg.x_max and
                     self.cfg.y_min <= pt_ego[1] <= self.cfg.y_max and
                     self.cfg.z_min <= pt_ego[2] <= self.cfg.z_max):
-                    # Yaw relative to ego
                     yaw_ego = math.radians(angle[1] - ego_yaml["true_ego_pos"][4])
-                    # box: [cx, cy, cz, dx, dy, dz, yaw]
                     box = [pt_ego[0], pt_ego[1], pt_ego[2], extent[0]*2, extent[1]*2, extent[2]*2, yaw_ego]
                     gt_boxes_ego.append(box)
                     gt_speeds.append(spd)
                     gt_is_moving.append(spd > self.cfg.moving_velocity_thresh)
 
-        # Process collaborators with latency Delta_t
-        # OPV2V sequence frames are recorded at 30 Hz (33.3 ms per index step).
-        # Latency frame lag: k_delay = round(delay_ms / 33.333)
-        frame_lag = int(round(self.delay_ms / 33.333))
+        # Process collaborators with latency Delta_t (100 ms per discrete step)
+        frame_lag = int(round(self.delay_ms / self.cfg.frame_interval_ms))
         collab_data = []
 
         for c_id in collab_ids:
             collab_idx = max(0, t_idx - frame_lag)
             collab_ts = timestamps[collab_idx]
-            actual_delay_ms = (t_idx - collab_idx) * 33.333
+            actual_delay_ms = (t_idx - collab_idx) * self.cfg.frame_interval_ms
 
             c_yaml_path = os.path.join(seq_dir, c_id, f"{collab_ts}.yaml")
             if not os.path.exists(c_yaml_path):
@@ -263,14 +254,13 @@ class OPV2VAsynchronousDataset(Dataset):
             # Extrinsic alignment: from delayed collaborator frame into current ego frame
             T_ego_collab = T_ego_world @ T_world_collab_delayed
 
-            # Relative distance and velocity
             c_pos_in_ego = T_ego_collab[:3, 3]
             c_dist = float(np.linalg.norm(c_pos_in_ego[:2]))
-            c_speed = float(c_yaml.get("ego_speed", 0.0))
-            ego_speed = float(ego_yaml.get("ego_speed", 0.0))
+            c_speed = float(c_yaml.get("ego_speed", 0.0)) / 3.6
+            ego_speed = float(ego_yaml.get("ego_speed", 0.0)) / 3.6
             rel_speed = abs(ego_speed - c_speed)
 
-            # Load delayed collaborator BEV feature
+            # Load delayed collaborator BEV feature strictly from its point cloud
             c_pcd_path = os.path.join(seq_dir, c_id, f"{collab_ts}.pcd")
             c_pts = parse_pcd_points(c_pcd_path)
             c_bev = points_to_bev_features(
@@ -281,34 +271,14 @@ class OPV2VAsynchronousDataset(Dataset):
                 grid_size=(self.cfg.bev_h, self.cfg.bev_w)
             )
 
-            # Extract delayed collaborator local vehicle observations
-            collab_local_boxes = []
-            if "vehicles" in c_yaml:
-                T_collab_world = np.linalg.inv(T_world_collab_delayed)
-                for v_id, v_info in c_yaml["vehicles"].items():
-                    loc = v_info["location"]
-                    ext = v_info["extent"]
-                    ang = v_info["angle"]
-                    v_spd = float(v_info.get("speed", 0.0))
-                    
-                    pt_w = np.array([loc[0], loc[1], loc[2], 1.0], dtype=np.float32)
-                    pt_c = (T_collab_world @ pt_w)[:3]
-                    if (self.cfg.x_min <= pt_c[0] <= self.cfg.x_max and
-                        self.cfg.y_min <= pt_c[1] <= self.cfg.y_max):
-                        collab_local_boxes.append([
-                            pt_c[0], pt_c[1], pt_c[2],
-                            ext[0]*2, ext[1]*2, ext[2]*2,
-                            math.radians(ang[1] - c_yaml["true_ego_pos"][4]), v_spd
-                        ])
-
+            # Collaborator payload contains ZERO ground-truth boxes
             collab_data.append({
                 "agent_id": c_id,
                 "delay_ms": actual_delay_ms,
                 "distance": c_dist,
                 "rel_speed": rel_speed,
                 "T_ego_collab": T_ego_collab,
-                "bev_features": c_bev,
-                "local_boxes": np.array(collab_local_boxes, dtype=np.float32) if collab_local_boxes else np.zeros((0, 8), dtype=np.float32)
+                "bev_features": c_bev
             })
 
         return {

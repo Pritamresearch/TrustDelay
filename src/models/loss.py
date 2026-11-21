@@ -66,7 +66,11 @@ class TrustDelayLoss(nn.Module):
         if pos_mask.sum() > 0:
             pos_boxes = boxes[0, pos_mask]
             matched_gts = gt_boxes[matched_gt_idx[pos_mask]]
-            reg_loss = F.smooth_l1_loss(pos_boxes, matched_gts, beta=1.0)
+            # Wrap yaw heading difference to [-pi, pi] to avoid 2*pi boundary spikes
+            pos_diff = pos_boxes.clone()
+            yaw_diff = torch.atan2(torch.sin(pos_boxes[:, 6] - matched_gts[:, 6]), torch.cos(pos_boxes[:, 6] - matched_gts[:, 6]))
+            pos_diff[:, 6] = matched_gts[:, 6] + yaw_diff
+            reg_loss = F.smooth_l1_loss(pos_diff, matched_gts, beta=1.0)
         else:
             reg_loss = torch.tensor(0.0, device=device)
 

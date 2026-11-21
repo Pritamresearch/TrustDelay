@@ -65,6 +65,7 @@ def run_ablations():
     test_loss = 0.20
     test_pose_trans = 0.2
     test_pose_rot = 0.2
+    test_dataset.set_delay_ms(int(test_delay))
 
     ablations = {
         "Full TrustDelay": lambda s: model(

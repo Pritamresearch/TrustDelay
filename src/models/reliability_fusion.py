@@ -38,10 +38,10 @@ class ReliabilityGatingNetwork(nn.Module):
         inputs = torch.cat([delay_sec, uncertainty_sigma, packet_valid, pose_noise_mag], dim=-1)
         # Physics-guided baseline prior:
         # High delay -> lower weight; high sigma -> lower weight; packet lost -> zero weight
-        analytic_gate = packet_valid * torch.exp(-1.5 * delay_sec) * torch.exp(-0.8 * uncertainty_sigma) * torch.exp(-0.5 * pose_noise_mag)
+        analytic_gate = torch.exp(-1.5 * delay_sec) * torch.exp(-0.8 * uncertainty_sigma) * torch.exp(-0.5 * pose_noise_mag)
         learned_gate = self.gate_mlp(inputs)
-        # Blend learned with physical prior
-        w = 0.5 * learned_gate + 0.5 * analytic_gate
+        # Blend learned with physical prior and strictly enforce zero weight on lost packets
+        w = packet_valid * (0.5 * learned_gate + 0.5 * analytic_gate)
         return w.clamp(min=0.0, max=1.0)
 
 
@@ -56,6 +56,13 @@ class ReliabilityWeightedFusion(nn.Module):
         self.num_heads = num_heads
 
         self.reliability_gate = ReliabilityGatingNetwork(hidden_dim=32)
+
+        # 3D Metric Spatial Positional Embedding
+        self.pos_encoder = nn.Sequential(
+            nn.Linear(3, feat_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(feat_dim, feat_dim)
+        )
 
         # Multi-Head Attention: Ego queries attend to collaborator keys/values
         self.cross_attn = nn.MultiheadAttention(embed_dim=feat_dim, num_heads=num_heads, dropout=dropout, batch_first=True)
@@ -106,7 +113,7 @@ class ReliabilityWeightedFusion(nn.Module):
             }
 
         if fusion_type == "uniform":
-            weights = torch.ones((B, M, 1), device=ego_queries.device)
+            weights = torch.ones((B, M, 1), device=ego_queries.device) * packet_mask
         elif fusion_type == "confidence_only":
             weights = torch.exp(-0.5 * collab_sigmas) * packet_mask
         else:
@@ -116,14 +123,14 @@ class ReliabilityWeightedFusion(nn.Module):
         # Scale collaborator features by reliability weights
         weighted_collab_feats = collab_feats * weights
 
-        # Spatial-aware positional encoding relative to ego boxes
-        pos_delta = collab_boxes[:, :, :3] - ego_boxes[:, :1, :3]  # coarse offset
-        pos_proj = torch.cat([pos_delta, torch.norm(pos_delta, dim=-1, keepdim=True)], dim=-1)
+        # Spatial positional encodings for queries and keys
+        pos_ego = self.pos_encoder(ego_boxes[:, :, :3])
+        pos_collab = self.pos_encoder(collab_boxes[:, :, :3])
 
         # Cross Attention: Ego queries attend to weighted collaborator evidence
         attn_out, attn_weights = self.cross_attn(
-            query=ego_queries,
-            key=weighted_collab_feats,
+            query=ego_queries + pos_ego,
+            key=weighted_collab_feats + pos_collab,
             value=weighted_collab_feats
         )
 

@@ -56,14 +56,15 @@ class MotionExtrapolator(nn.Module):
         query_feats: torch.Tensor,       # (B, N, C)
         delayed_boxes: torch.Tensor,     # (B, N, 7) [cx, cy, cz, dx, dy, dz, yaw]
         delay_sec: torch.Tensor,         # (B, 1) or (B, N, 1)
-        mode: str = "learned_uncertainty"
+        mode: str = "learned_uncertainty",
+        initial_vel: Optional[torch.Tensor] = None # (B, N, 2) [vx, vy] optional prior
     ) -> Dict[str, torch.Tensor]:
         """
         Extrapolates state to current ego timestamp according to specified mode:
           - 'none': identity (no correction)
           - 'linear': linear extrapolation with constant velocity assumption
-          - 'constant_velocity': 2nd-order kinematic model without learned residuals
-          - 'learned_uncertainty': full TrustDelay uncertainty-aware motion extrapolator
+          - 'constant_velocity': 1st-order constant velocity kinematic model (a = 0)
+          - 'learned_uncertainty': full TrustDelay uncertainty-aware motion extrapolator (v*dt + 0.5*a*dt^2 + delta)
         """
         B, N, C = query_feats.shape
         if delay_sec.dim() == 2:
@@ -82,11 +83,13 @@ class MotionExtrapolator(nn.Module):
                 "log_var": dummy_log_var
             }
 
-        # Initialize default velocities from box priors if not explicitly known
-        # In OPV2V, vehicle orientation gives primary velocity direction
-        yaws = delayed_boxes[:, :, 6:7]
-        init_vx = torch.cos(yaws) * 5.0  # default cruising speed prior
-        init_vy = torch.sin(yaws) * 5.0
+        # Initialize default velocities: use initial_vel if provided; else initialize to 0 so static cars aren't pushed
+        if initial_vel is not None:
+            init_vx = initial_vel[:, :, 0:1]
+            init_vy = initial_vel[:, :, 1:2]
+        else:
+            init_vx = torch.zeros((B, N, 1), device=query_feats.device)
+            init_vy = torch.zeros((B, N, 1), device=query_feats.device)
         init_ax = torch.zeros_like(init_vx)
         init_ay = torch.zeros_like(init_vy)
 
@@ -106,20 +109,14 @@ class MotionExtrapolator(nn.Module):
         log_var = torch.clamp(log_var, min=-4.0, max=4.0)
 
         dt = delay_sec
-        if mode == "linear":
-            # Linear extrapolation: x + v * dt
+        if mode in ("linear", "constant_velocity"):
+            # Constant velocity kinematics: x + v * dt (acceleration a = 0, no learned residuals)
             extrap_cx = delayed_boxes[:, :, 0:1] + pred_vx * dt
             extrap_cy = delayed_boxes[:, :, 1:2] + pred_vy * dt
             extrap_cz = delayed_boxes[:, :, 2:3]
             extrap_yaw = delayed_boxes[:, :, 6:7]
-        elif mode == "constant_velocity":
-            # 2nd-order kinematic extrapolation without neural residuals
-            extrap_cx = delayed_boxes[:, :, 0:1] + pred_vx * dt + 0.5 * pred_ax * (dt ** 2)
-            extrap_cy = delayed_boxes[:, :, 1:2] + pred_vy * dt + 0.5 * pred_ay * (dt ** 2)
-            extrap_cz = delayed_boxes[:, :, 2:3]
-            extrap_yaw = delayed_boxes[:, :, 6:7]
         else:
-            # Full TrustDelay learned uncertainty-aware extrapolation
+            # Full TrustDelay learned uncertainty-aware extrapolation: 2nd-order kinematics + learned residual
             extrap_cx = delayed_boxes[:, :, 0:1] + pred_vx * dt + 0.5 * pred_ax * (dt ** 2) + delta[:, :, 0:1]
             extrap_cy = delayed_boxes[:, :, 1:2] + pred_vy * dt + 0.5 * pred_ay * (dt ** 2) + delta[:, :, 1:2]
             extrap_cz = delayed_boxes[:, :, 2:3] + delta[:, :, 2:3]

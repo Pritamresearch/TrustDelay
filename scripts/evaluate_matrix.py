@@ -103,6 +103,7 @@ def run_evaluation_suite():
     }
 
     for d in delays:
+        test_dataset.set_delay_ms(d)
         benchmark_records["delay_sweep"][str(d)] = {}
         print(f"\nDelay = {d} ms:")
         for name, fn in methods.items():
@@ -114,6 +115,7 @@ def run_evaluation_suite():
     # 2. Wireless Packet Loss Stress Test (0% to 50%)
     # -------------------------------------------------------------
     print("\n--- Running Wireless Packet Loss Stress Test (0% - 50%) at 200ms Delay ---")
+    test_dataset.set_delay_ms(200)
     loss_rates = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
     for p_loss in loss_rates:
         tag = f"{int(p_loss*100)}%"
@@ -134,6 +136,7 @@ def run_evaluation_suite():
     # 3. Pose Noise Localization Stress Test
     # -------------------------------------------------------------
     print("\n--- Running Pose Noise Localization Stress Test at 200ms Delay ---")
+    test_dataset.set_delay_ms(200)
     pose_levels = [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), (0.3, 0.3), (0.5, 0.5)]
     for trans_err, rot_err in pose_levels:
         tag = f"{trans_err}m_{rot_err}deg"
@@ -154,6 +157,7 @@ def run_evaluation_suite():
     # 4. Bandwidth Budget Sweeps (1 KB, 5 KB, 10 KB, 20 KB)
     # -------------------------------------------------------------
     print("\n--- Running Bandwidth Budget Sweeps ---")
+    test_dataset.set_delay_ms(200)
     budgets = [1, 5, 10, 20]
     for b in budgets:
         tag = f"{b}KB"
@@ -173,6 +177,7 @@ def run_evaluation_suite():
     # 5. Dynamic Motion Breakdown (Moving vs Stationary)
     # -------------------------------------------------------------
     print("\n--- Moving vs Stationary Object AP Breakdown at 300ms Delay ---")
+    test_dataset.set_delay_ms(300)
     dyn_methods = {
         "No Extrapolation": lambda s: model(s, delay_override_ms=300.0, extrapolation_mode="none"),
         "Linear Extrapolation": lambda s: model(s, delay_override_ms=300.0, extrapolation_mode="linear"),

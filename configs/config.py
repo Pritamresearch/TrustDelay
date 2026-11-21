@@ -30,7 +30,7 @@ class TrustDelayConfig:
     bev_w: int = 100
     bev_h: int = 100
     feat_dim: int = 64
-    num_queries: int = 64
+    num_queries: int = 160
     max_collaborators: int = 4
     
     # --- Latency & Temporal Asynchrony Settings ---
@@ -49,9 +49,9 @@ class TrustDelayConfig:
     default_pose_rot_std: float = 0.0
     
     # Bandwidth Budgets (in KB per collaborator per frame)
-    # 1 KB (~16 tokens), 5 KB (~80 tokens), 10 KB (~160 tokens), 20 KB (~320 tokens or dense compressed BEV)
+    # 1 KB (8 tokens), 5 KB (40 tokens), 10 KB (80 tokens), 20 KB (160 tokens)
     bandwidth_budgets_kb: List[int] = field(default_factory=lambda: [1, 5, 10, 20])
-    bytes_per_query: int = 64  # [x, y, z, dx, dy, dz, yaw, vx, vy, sigma] (half-precision / quantized)
+    bytes_per_query: int = 128  # [feat_dim (64xFP16=128B) + box & motion params (quantized/compressed)]
     
     # --- Module 1: Ego Perception Encoder ---
     backbone_type: str = "compact_bev"  # "compact_bev" or "pointpillars"

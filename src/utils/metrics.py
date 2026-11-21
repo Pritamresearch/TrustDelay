@@ -11,9 +11,24 @@ import numpy as np
 import torch
 from typing import Dict, List, Tuple
 
+try:
+    from shapely.geometry import Polygon
+    SHAPELY_AVAILABLE = True
+except ImportError:
+    SHAPELY_AVAILABLE = False
+
+def _box_to_polygon(box: np.ndarray):
+    cx, cy, _, dx, dy, _, yaw = box
+    hx, hy = dx / 2.0, dy / 2.0
+    corners = np.array([[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]], dtype=np.float64)
+    c, s = math.cos(yaw), math.sin(yaw)
+    R = np.array([[c, -s], [s, c]], dtype=np.float64)
+    pts = corners @ R.T + np.array([cx, cy], dtype=np.float64)
+    return Polygon(pts)
+
 def compute_bev_iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
     """
-    Computes 2D BEV IoU between two sets of oriented/axis-aligned 3D boxes.
+    Computes exact 2D oriented BEV IoU between two sets of 3D boxes using Polygon intersections.
     boxes: [cx, cy, cz, dx, dy, dz, yaw]
     """
     N = len(boxes_a)
@@ -21,8 +36,34 @@ def compute_bev_iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarr
     if N == 0 or M == 0:
         return np.zeros((N, M), dtype=np.float32)
 
-    # 2D Axis-aligned bounding box bounding approximation with yaw factor
-    # Min/max bounds in BEV
+    iou_matrix = np.zeros((N, M), dtype=np.float32)
+
+    if SHAPELY_AVAILABLE:
+        polys_a = [_box_to_polygon(boxes_a[i]) for i in range(N)]
+        polys_b = [_box_to_polygon(boxes_b[j]) for j in range(M)]
+
+        for i in range(N):
+            pa = polys_a[i]
+            if not pa.is_valid or pa.area <= 1e-4:
+                continue
+            for j in range(M):
+                pb = polys_b[j]
+                if not pb.is_valid or pb.area <= 1e-4:
+                    continue
+                # Fast bounding box rejection
+                if (pa.bounds[2] < pb.bounds[0] or pa.bounds[0] > pb.bounds[2] or
+                    pa.bounds[3] < pb.bounds[1] or pa.bounds[1] > pb.bounds[3]):
+                    continue
+                try:
+                    inter = pa.intersection(pb).area
+                    union = pa.area + pb.area - inter
+                    if union > 0:
+                        iou_matrix[i, j] = float(inter / union)
+                except Exception:
+                    continue
+        return iou_matrix
+
+    # Fallback to Axis-Aligned Bounding Box approximation
     a_min_x = boxes_a[:, 0] - boxes_a[:, 3] / 2.0
     a_max_x = boxes_a[:, 0] + boxes_a[:, 3] / 2.0
     a_min_y = boxes_a[:, 1] - boxes_a[:, 4] / 2.0
@@ -34,8 +75,6 @@ def compute_bev_iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarr
     b_min_y = boxes_b[:, 1] - boxes_b[:, 4] / 2.0
     b_max_y = boxes_b[:, 1] + boxes_b[:, 4] / 2.0
     area_b = boxes_b[:, 3] * boxes_b[:, 4]
-
-    iou_matrix = np.zeros((N, M), dtype=np.float32)
 
     for i in range(N):
         inter_x1 = np.maximum(a_min_x[i], b_min_x)
@@ -50,11 +89,9 @@ def compute_bev_iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarr
         union_area = area_a[i] + area_b - inter_area
         iou = np.where(union_area > 0, inter_area / union_area, 0.0)
 
-        # Apply heading penalty if angles are heavily misaligned (|delta_yaw| > 45 deg)
         yaw_diff = np.abs(boxes_a[i, 6] - boxes_b[:, 6])
         yaw_diff = np.minimum(yaw_diff, 2 * np.pi - yaw_diff)
         heading_penalty = np.clip(1.0 - yaw_diff / (np.pi / 2.0), 0.5, 1.0)
-
         iou_matrix[i] = iou * heading_penalty
 
     return iou_matrix

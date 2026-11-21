@@ -99,9 +99,11 @@ class QueryGenerator(nn.Module):
         queries = torch.gather(flat_feat, 1, idx_expanded_feat)
         query_boxes = torch.gather(flat_boxes, 1, idx_expanded_box)
 
-        # Re-center coordinates in metric ego frame
-        xs = (top_indices % W).float() / W * 100.0 - 50.0
-        ys = (top_indices // W).float() / H * 100.0 - 50.0
+        # Re-center coordinates in metric ego frame:
+        # row index (top_indices // W) corresponds to metric X (forward)
+        # col index (top_indices % W) corresponds to metric Y (lateral)
+        xs = (top_indices // W).float() / float(H) * 100.0 - 50.0
+        ys = (top_indices % W).float() / float(W) * 100.0 - 50.0
         query_boxes[:, :, 0] += xs
         query_boxes[:, :, 1] += ys
 

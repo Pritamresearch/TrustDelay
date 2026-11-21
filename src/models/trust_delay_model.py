@@ -114,6 +114,7 @@ class TrustDelayModel(nn.Module):
         # -------------------------------------------------------------
         gathered_collab_feats = []
         gathered_collab_boxes = []
+        gathered_collab_log_vars = []
         gathered_delays = []
         gathered_sigmas = []
         gathered_packet_masks = []
@@ -182,11 +183,14 @@ class TrustDelayModel(nn.Module):
                 scores=c_scores,
                 uncertainty_sigma=uncertainty_sigma,
                 budget_kb=bandwidth_budget_kb,
-                packet_loss_rate=p_loss
+                packet_loss_rate=p_loss,
+                log_vars=extrap_dict.get("log_var")
             )
 
             gathered_collab_feats.append(bw_res["selected_feats"])
             gathered_collab_boxes.append(bw_res["selected_boxes"])
+            if bw_res.get("selected_log_vars") is not None:
+                gathered_collab_log_vars.append(bw_res["selected_log_vars"])
             num_sel = bw_res["num_tokens"]
 
             gathered_delays.append(torch.full((1, num_sel, 1), delay_sec_val, device=device))
@@ -202,6 +206,7 @@ class TrustDelayModel(nn.Module):
             sigmas_cat = torch.cat(gathered_sigmas, dim=1)
             masks_cat = torch.cat(gathered_packet_masks, dim=1)
             poses_cat = torch.cat(gathered_pose_mags, dim=1)
+            log_vars_cat = torch.cat(gathered_collab_log_vars, dim=1) if gathered_collab_log_vars else None
         else:
             collab_feats_cat = torch.empty((1, 0, self.feat_dim), device=device)
             collab_boxes_cat = torch.empty((1, 0, 7), device=device)
@@ -209,6 +214,7 @@ class TrustDelayModel(nn.Module):
             sigmas_cat = torch.empty((1, 0, 1), device=device)
             masks_cat = torch.empty((1, 0, 1), device=device)
             poses_cat = torch.empty((1, 0, 1), device=device)
+            log_vars_cat = None
 
         # -------------------------------------------------------------
         # Module 5: Reliability-Weighted Asynchronous Fusion
@@ -231,5 +237,6 @@ class TrustDelayModel(nn.Module):
             "reliability_weights": fuse_res.get("reliability_weights", None),
             "transmitted_kb": total_comm_kb,
             "selected_collabs": selected_indices,
-            "extrapolated_boxes": collab_boxes_cat
+            "extrapolated_boxes": collab_boxes_cat,
+            "log_var": log_vars_cat
         }

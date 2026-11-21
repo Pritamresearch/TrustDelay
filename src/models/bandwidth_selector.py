@@ -29,7 +29,8 @@ class BandwidthMessageSelector(nn.Module):
         scores: torch.Tensor,            # (B, N)
         uncertainty_sigma: torch.Tensor, # (B, N)
         budget_kb: int = 10,
-        packet_loss_rate: float = 0.0
+        packet_loss_rate: float = 0.0,
+        log_vars: Optional[torch.Tensor] = None # (B, N, 2)
     ) -> Dict[str, torch.Tensor]:
         """
         Selects top tokens within budget and applies packet loss channel masking.
@@ -53,6 +54,11 @@ class BandwidthMessageSelector(nn.Module):
         selected_scores = torch.gather(scores, 1, top_indices)
         selected_sigmas = torch.gather(uncertainty_sigma, 1, top_indices)
 
+        selected_log_vars = None
+        if log_vars is not None:
+            idx_lv = top_indices.unsqueeze(-1).expand(-1, -1, log_vars.shape[-1])
+            selected_log_vars = torch.gather(log_vars, 1, idx_lv)
+
         # Channel Simulation: Packet Loss
         # If packets are lost over the wireless channel, dropped tokens become zero/masked
         loss_mask = torch.ones((B, max_tokens), device=query_feats.device)
@@ -72,6 +78,7 @@ class BandwidthMessageSelector(nn.Module):
             "selected_boxes": selected_boxes,
             "selected_scores": selected_scores,
             "selected_sigmas": selected_sigmas,
+            "selected_log_vars": selected_log_vars,
             "loss_mask": loss_mask,
             "transmitted_kb": transmitted_kb,
             "num_tokens": max_tokens

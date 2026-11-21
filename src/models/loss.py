@@ -9,7 +9,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class TrustDelayLoss(nn.Module):
     def __init__(self, cls_weight: float = 2.0, reg_weight: float = 1.5, unc_weight: float = 0.5):
@@ -76,13 +76,20 @@ class TrustDelayLoss(nn.Module):
 
         # Heteroscedastic Motion Extrapolation Uncertainty Loss
         unc_loss = torch.tensor(0.0, device=device)
-        if extrap_dict is not None and "log_var" in extrap_dict and pos_mask.sum() > 0:
-            log_var = extrap_dict["log_var"][0, pos_mask]  # (K, 2)
-            # NLL: 0.5 * exp(-log_var) * diff^2 + 0.5 * log_var
-            pos_diff = pos_boxes[:, :2] - matched_gts[:, :2]
-            sq_err = torch.sum(pos_diff ** 2, dim=-1, keepdim=True)
-            var = torch.exp(log_var[:, :1])
-            unc_loss = torch.mean(0.5 * sq_err / torch.clamp(var, min=1e-3) + 0.5 * log_var[:, :1])
+        log_var = None
+        if extrap_dict is not None and "log_var" in extrap_dict:
+            log_var = extrap_dict["log_var"]
+        elif "log_var" in pred_dict and pred_dict["log_var"] is not None:
+            log_var = pred_dict["log_var"]
+
+        if log_var is not None and pos_mask.sum() > 0:
+            k_pos = min(pos_mask.sum().item(), log_var.shape[1])
+            if k_pos > 0:
+                pos_log_var = log_var[0, :k_pos]
+                pos_diff = pos_boxes[:k_pos, :2] - matched_gts[:k_pos, :2]
+                sq_err = torch.sum(pos_diff ** 2, dim=-1, keepdim=True)
+                var = torch.exp(pos_log_var[:, :1])
+                unc_loss = torch.mean(0.5 * sq_err / torch.clamp(var, min=1e-3) + 0.5 * pos_log_var[:, :1])
 
         total_loss = (
             self.cls_weight * cls_loss +

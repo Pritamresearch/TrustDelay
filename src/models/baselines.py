@@ -19,6 +19,48 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Any, List
 
+def bev_nms_torch(boxes: torch.Tensor, scores: torch.Tensor, iou_thresh: float = 0.4) -> torch.Tensor:
+    """
+    Fast BEV axis-aligned 2D NMS for box deduplication in Late Fusion.
+    """
+    if len(boxes) == 0:
+        return torch.empty((0,), dtype=torch.long, device=boxes.device)
+    
+    order = torch.argsort(scores, descending=True)
+    boxes_sorted = boxes[order]
+    
+    cx, cy = boxes_sorted[:, 0], boxes_sorted[:, 1]
+    dx, dy = boxes_sorted[:, 3], boxes_sorted[:, 4]
+    
+    x1, x2 = cx - dx / 2.0, cx + dx / 2.0
+    y1, y2 = cy - dy / 2.0, cy + dy / 2.0
+    areas = dx * dy
+    
+    keep = []
+    suppressed = torch.zeros(len(order), dtype=torch.bool, device=boxes.device)
+    
+    for i in range(len(order)):
+        if suppressed[i]:
+            continue
+        keep.append(order[i].item())
+        
+        xx1 = torch.maximum(x1[i], x1[i+1:])
+        yy1 = torch.maximum(y1[i], y1[i+1:])
+        xx2 = torch.minimum(x2[i], x2[i+1:])
+        yy2 = torch.minimum(y2[i], y2[i+1:])
+        
+        w = torch.clamp(xx2 - xx1, min=0.0)
+        h = torch.clamp(yy2 - yy1, min=0.0)
+        inter = w * h
+        union = areas[i] + areas[i+1:] - inter
+        iou = inter / torch.clamp(union, min=1e-6)
+        
+        close = iou > iou_thresh
+        suppressed[i+1:][close] = True
+        
+    return torch.tensor(keep, dtype=torch.long, device=boxes.device)
+
+
 class CooperativeBaselines(nn.Module):
     def __init__(self, trust_delay_model):
         super().__init__()
@@ -71,11 +113,19 @@ class CooperativeBaselines(nn.Module):
                 all_boxes.append(b_ego)
                 all_logits.append(torch.ones(len(b_ego), device=device) * 0.5)
 
-        merged_boxes = torch.cat(all_boxes, dim=0).unsqueeze(0)
-        merged_logits = torch.cat(all_logits, dim=0).unsqueeze(0)
+        merged_boxes = torch.cat(all_boxes, dim=0)
+        merged_logits = torch.cat(all_logits, dim=0)
+        
+        # Deduplicate detections via BEV NMS
+        scores = torch.sigmoid(merged_logits)
+        keep = bev_nms_torch(merged_boxes, scores, iou_thresh=0.4)
+        if len(keep) > 0:
+            merged_boxes = merged_boxes[keep]
+            merged_logits = merged_logits[keep]
+
         return {
-            "pred_logits": merged_logits,
-            "pred_boxes": merged_boxes,
+            "pred_logits": merged_logits.unsqueeze(0),
+            "pred_boxes": merged_boxes.unsqueeze(0),
             "transmitted_kb": 2.0
         }
 

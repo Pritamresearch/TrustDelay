@@ -298,7 +298,7 @@ class OPV2VAsynchronousDataset(Dataset):
                         collab_local_boxes.append([
                             pt_c[0], pt_c[1], pt_c[2],
                             ext[0]*2, ext[1]*2, ext[2]*2,
-                            math.radians(ang[1]), v_spd
+                            math.radians(ang[1] - c_yaml["true_ego_pos"][4]), v_spd
                         ])
 
             collab_data.append({

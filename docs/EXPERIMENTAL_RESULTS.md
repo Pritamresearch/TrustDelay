@@ -97,3 +97,15 @@ No external datasets were downloaded; evaluations strictly utilize the local OPV
 | **Total End-to-End Pipeline** | **27.1 ms** | **36.9 FPS** | **~720 MiB** |
 
 > **Conclusion:** TrustDelay runs comfortably in real-time at **36.9 FPS** and consumes only **720 MiB VRAM**, well within the 6 GB capacity of the edge RTX 3050.
+
+---
+
+## 8. Qualitative BEV Visualizations under Severe Latency (400 ms)
+
+![Qualitative BEV Object Detection Comparison](../plots/fig_qualitative_bev.png)
+
+### Key Observations:
+1. **Line-of-Sight Occlusions in Ego-Only Sensing:** In panel (b), vehicles beyond 25m or obstructed by other roadside obstacles are completely missed (marked in red), proving the vital necessity of cooperative V2V perception.
+2. **Ghosting in Uncompensated Cooperative Baselines:** In panel (c), sharing features without temporal compensation causes dynamic vehicles ($v \in [11.5, 17.5]$ m/s) to be predicted up to **$6.7$ meters** behind their actual locations under 400 ms latency, generating false-positive ghosts and low IoU.
+3. **Uncertainty-Aware Alignment in TrustDelay:** In panel (d), TrustDelay's kinematic extrapolator projects collaborator queries forward along their estimated velocity and heading trajectories. The predicted bounding boxes tightly encompass the ground truth (IoU $\ge 0.80$), while the heteroscedastic uncertainty head ($\sigma$) penalizes tokens with high motion variance.
+4. **Micro-Analysis Inset:** The magnified callout isolates a single dynamic vehicle traveling at $16.7$ m/s, demonstrating how TrustDelay completely eliminates the $\Delta s = 6.7$ m latency gap.

@@ -44,6 +44,20 @@ Under severe communication latency ($\Delta t \ge 400$ ms), uncompensated interm
 
 ---
 
+### D. Qualitative BEV Detection Visualizations under 400 ms Latency
+
+<p align="center">
+  <img src="./plots/fig_qualitative_bev.png" width="98%" alt="Qualitative BEV Object Detection Comparison under 400ms Asynchronous Delay" />
+</p>
+
+* **Panel (a) Ground Truth & Cooperative V2V Context:** Real multi-agent scene with Ego at `(0, 0)`, connected V2V collaborator at `(30.5m, -21.6m)`, and 6 high-speed dynamic vehicles ($v \in [11.5, 17.5]$ m/s).
+* **Panel (b) Ego-Only Blind Spots:** Single-vehicle sensing suffers severe line-of-sight occlusion; distant or shadowed vehicles are completely missed (red circles).
+* **Panel (c) Uncompensated Asynchronous Ghosting:** At 400 ms latency, uncompensated collaborator evidence projects vehicles at stale timestamps ($t - 400$ ms), creating phantom boxes lagged by up to **$6.7$ meters** behind reality.
+* **Panel (d) TrustDelay Uncertainty-Aware Extrapolation (Ours):** TrustDelay's kinematic extrapolator projects dynamic vehicles forward onto their true positions, achieving **IoU $\ge 0.80$**, with calibrated heteroscedastic uncertainty ellipses ($\sigma$) down-weighting noisy evidence.
+* **Inset Callout (Micro-Analysis):** Visualizes the exact $\Delta s = 6.7$ m spatial displacement vector corrected by TrustDelay for a $16.7$ m/s vehicle under 400 ms latency.
+
+---
+
 ## 2. Research Gap & Defensible Novelty
 
 | Key Dimension | Prior SOTA (LRCP, TraF-Align, CoDynTrust, Where2comm) | **TrustDelay (Ours)** |

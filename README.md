@@ -15,7 +15,7 @@ Official PyTorch implementation of **TrustDelay**, a unified uncertainty-aware a
 Under severe communication latency ($\Delta t \ge 400$ ms), uncompensated intermediate feature methods (Where2comm, F-Cooper) suffer from feature misregistration and degrade below the Ego-Only baseline due to latency-induced ghosting. **TrustDelay maintains 56.4% AP@0.7 at 500 ms delay (+10.8% over TraF-Align and +17.4% over LRCP)** while transmitting **8.4 KB/frame** (16% less bandwidth).
 
 <p align="center">
-  <img src="plots/fig_delay_robustness.png" width="85%" alt="Detection Robustness under Asynchronous Delay">
+  <img src="./plots/fig_delay_robustness_v2.png" width="90%" alt="Detection Robustness under Asynchronous Delay across all 9 baselines on OPV2V">
 </p>
 
 ---
@@ -23,8 +23,8 @@ Under severe communication latency ($\Delta t \ge 400$ ms), uncompensated interm
 ### B. Bandwidth-Accuracy Trade-off & Wireless Packet Loss Resilience
 
 <p align="center">
-  <img src="plots/fig_bandwidth_pareto.png" width="48%" alt="Accuracy vs Bandwidth Pareto Frontier" />
-  <img src="plots/fig_packet_loss.png" width="48%" alt="Resilience to Packet Drop Channels" />
+  <img src="./plots/fig_bandwidth_pareto.png" width="48%" alt="Accuracy vs Bandwidth Pareto Frontier" />
+  <img src="./plots/fig_packet_loss.png" width="48%" alt="Resilience to Packet Drop Channels" />
 </p>
 
 * **Accuracy vs. Bandwidth Pareto Curve (Left):** Under strict byte budgets (1 KB, 5 KB, 10 KB, 20 KB), TrustDelay's utility-aware message pruner prioritizes high-confidence, low-uncertainty object tokens, outperforming Where2comm by **+7.4% to +12.6% AP@0.7**.
@@ -35,8 +35,8 @@ Under severe communication latency ($\Delta t \ge 400$ ms), uncompensated interm
 ### C. Dynamic Motion Breakdown & Component Ablations
 
 <p align="center">
-  <img src="plots/fig_dynamic_motion.png" width="48%" alt="Moving vs Stationary Vehicle Breakdown" />
-  <img src="plots/fig_ablation_study.png" width="48%" alt="Component-Wise Ablation Study" />
+  <img src="./plots/fig_dynamic_motion.png" width="48%" alt="Moving vs Stationary Vehicle Breakdown" />
+  <img src="./plots/fig_ablation_study.png" width="48%" alt="Component-Wise Ablation Study" />
 </p>
 
 * **Dynamic Object Extrapolation (Left):** Moving vehicles ($v > 0.5$ m/s) suffer an acute drop to 31.2% AP@0.7 without extrapolation at 300 ms. Constant-velocity projection achieves 49.8%. TrustDelay's learned kinematics and heteroscedastic uncertainty head achieve **58.4% AP@0.7 (+8.6% gain over constant velocity)**.

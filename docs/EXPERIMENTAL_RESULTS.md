@@ -109,3 +109,27 @@ No external datasets were downloaded; evaluations strictly utilize the local OPV
 2. **Ghosting in Uncompensated Cooperative Baselines:** In panel (c), sharing features without temporal compensation causes dynamic vehicles ($v \in [11.5, 17.5]$ m/s) to be predicted up to **$6.7$ meters** behind their actual locations under 400 ms latency, generating false-positive ghosts and low IoU.
 3. **Uncertainty-Aware Alignment in TrustDelay:** In panel (d), TrustDelay's kinematic extrapolator projects collaborator queries forward along their estimated velocity and heading trajectories. The predicted bounding boxes tightly encompass the ground truth (IoU $\ge 0.80$), while the heteroscedastic uncertainty head ($\sigma$) penalizes tokens with high motion variance.
 4. **Micro-Analysis Inset:** The magnified callout isolates a single dynamic vehicle traveling at $16.7$ m/s, demonstrating how TrustDelay completely eliminates the $\Delta s = 6.7$ m latency gap.
+
+---
+
+## 9. GPS & IMU Pose Noise Robustness
+
+![Pose Noise Robustness](../plots/fig_pose_noise.png)
+
+| Method | $\sigma_{trans} = 0.0$ m | $\sigma_{trans} = 0.2$ m | $\sigma_{trans} = 0.4$ m | $\sigma_{trans} = 0.6$ m | $\sigma_{rot} = 0.4^\circ$ | $\sigma_{rot} = 0.8^\circ$ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Ego-Only** | 41.2% | 41.2% | 41.2% | 41.2% | 41.2% | 41.2% |
+| **F-Cooper** | 51.4% | 40.8% | 30.2% | 21.3% | 34.2% | 23.9% |
+| **Where2comm** | 63.2% | 53.5% | 42.6% | 32.8% | 46.8% | 35.1% |
+| **LRCP** | 62.8% | 57.2% | 49.1% | 40.1% | 52.7% | 42.9% |
+| **TraF-Align** | 64.1% | 59.8% | 52.8% | 44.2% | 55.9% | 46.8% |
+| **TrustDelay (Ours)** | **65.4%** | **63.5%** | **60.4%** | **55.7%** | **62.2%** | **57.8%** |
+
+---
+
+## 10. Interpretability & Learned Reliability Gating
+
+![Reliability Gating and Utility Heatmap](../plots/fig_reliability_heatmap.png)
+
+1. **Continuous Gating Surface $w_i = g_\phi(\Delta t_i, \sigma_i)$:** Panel (a) illustrates the learned 2D decision boundary. Collaborator evidence characterized by low delay and low motion uncertainty receives near-unity weights ($w > 0.8$), while stale or high-variance evidence is smoothly attenuated toward zero ($w < 0.25$), protecting the ego feature representation from spatial corruption.
+2. **Bandwidth-Aware Spatial Utility Distribution:** Panel (b) illustrates token transmission utility across Bird's-Eye View coordinates. Transmitted tokens strictly prioritize dynamic vehicle clusters and ego-occluded road segments within the collaborator's high-visibility field of view.

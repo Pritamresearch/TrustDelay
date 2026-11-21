@@ -58,6 +58,18 @@ Under severe communication latency ($\Delta t \ge 400$ ms), uncompensated interm
 
 ---
 
+### E. Localization Noise Robustness & Interpretability Gating Landscape
+
+<p align="center">
+  <img src="./plots/fig_pose_noise.png" width="48%" alt="Detection Robustness to GPS and IMU Noise" />
+  <img src="./plots/fig_reliability_heatmap.png" width="48%" alt="Learned Reliability Weight and Utility Heatmap" />
+</p>
+
+* **Pose Noise Robustness (Left):** Under severe GPS translation noise ($\sigma_{trans} = 0.5$ m) and IMU heading error ($\sigma_{rot} = 0.8^\circ$), uncompensated intermediate fusion methods (F-Cooper, Where2comm) experience severe spatial smearing and collapse to 25.4% and 35.1% AP@0.7. TrustDelay's pose-attenuated reliability gate retains **58.2% AP@0.7 (+9.6% over TraF-Align)**.
+* **Interpretability & Attention Heatmaps (Right):** Visualizes the learned continuous gating surface $w_i = g_\phi(\Delta t_i, \sigma_i)$, verifying that TrustDelay establishes a clear **High-Trust Safe Region ($w > 0.8$)** for low-delay tokens and smoothly attenuates stale/uncertain collaborator evidence down to $< 0.25$ without corrupting ego features.
+
+---
+
 ## 2. Research Gap & Defensible Novelty
 
 | Key Dimension | Prior SOTA (LRCP, TraF-Align, CoDynTrust, Where2comm) | **TrustDelay (Ours)** |

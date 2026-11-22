@@ -1,0 +1,165 @@
+{
+  "experiment": "E3",
+  "description": "Decomposed extrapolation ablation into kinematic projection vs learned feature update",
+  "git_commit": "defb5441955eb407f39cd28c980c451f2d4451e0",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "timestamp": "2026-11-22 21:58:33",
+  "operating_point": {
+    "true_delay_ms": 300.0,
+    "true_frame_lag": 3,
+    "packet_loss_rate": 0.1,
+    "pose_noise_translation_m": 0.1,
+    "pose_noise_rotation_deg": 0.1,
+    "bandwidth_budget_kb": 8.4,
+    "seeds": [
+      42,
+      43,
+      44
+    ]
+  },
+  "results": {
+    "Full TrustDelay": {
+      "mode_key": "learned",
+      "description": "Kinematics ON, Feature Update ON",
+      "AP@0.3_mean": 47.7,
+      "AP@0.3_std": 0.72,
+      "AP@0.5_mean": 10.2,
+      "AP@0.5_std": 0.08,
+      "AP@0.7_mean": 0.35,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4,
+      "seed_runs": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "AP@0.3": [
+          47.34,
+          48.7,
+          47.05
+        ],
+        "AP@0.5": [
+          10.2,
+          10.31,
+          10.1
+        ],
+        "AP@0.7": [
+          0.32,
+          0.38,
+          0.35
+        ]
+      }
+    },
+    "Projection-Only-Off": {
+      "mode_key": "projection_only_off",
+      "description": "Kinematics OFF (p_hat = p), Feature Update ON",
+      "AP@0.3_mean": 47.51,
+      "AP@0.3_std": 0.83,
+      "AP@0.5_mean": 10.22,
+      "AP@0.5_std": 0.14,
+      "AP@0.7_mean": 0.35,
+      "AP@0.7_std": 0.01,
+      "comm_kb": 8.4,
+      "seed_runs": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "AP@0.3": [
+          47.18,
+          48.65,
+          46.7
+        ],
+        "AP@0.5": [
+          10.38,
+          10.22,
+          10.05
+        ],
+        "AP@0.7": [
+          0.34,
+          0.36,
+          0.34
+        ]
+      }
+    },
+    "Feature-Update-Off": {
+      "mode_key": "feature_update_off",
+      "description": "Kinematics ON, Feature Update OFF (q_tilde = q)",
+      "AP@0.3_mean": 48.76,
+      "AP@0.3_std": 0.47,
+      "AP@0.5_mean": 5.13,
+      "AP@0.5_std": 0.19,
+      "AP@0.7_mean": 0.08,
+      "AP@0.7_std": 0.0,
+      "comm_kb": 8.4,
+      "seed_runs": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "AP@0.3": [
+          49.2,
+          48.96,
+          48.11
+        ],
+        "AP@0.5": [
+          5.26,
+          5.26,
+          4.86
+        ],
+        "AP@0.7": [
+          0.08,
+          0.07,
+          0.08
+        ]
+      }
+    },
+    "Both-Off": {
+      "mode_key": "none",
+      "description": "Kinematics OFF, Feature Update OFF",
+      "AP@0.3_mean": 41.75,
+      "AP@0.3_std": 0.54,
+      "AP@0.5_mean": 2.9,
+      "AP@0.5_std": 0.05,
+      "AP@0.7_mean": 0.08,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4,
+      "seed_runs": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "AP@0.3": [
+          42.41,
+          41.75,
+          41.08
+        ],
+        "AP@0.5": [
+          2.84,
+          2.97,
+          2.89
+        ],
+        "AP@0.7": [
+          0.09,
+          0.06,
+          0.1
+        ]
+      }
+    }
+  },
+  "decomposition_analysis": {
+    "full_ap05": 10.2,
+    "proj_only_off_ap05": 10.22,
+    "feat_update_off_ap05": 5.13,
+    "both_off_ap05": 2.9,
+    "total_drop_pts": 7.3,
+    "kinematic_drop_pts": -0.02,
+    "feature_update_drop_pts": 5.07,
+    "kinematic_share_pct": -0.3,
+    "feature_update_share_pct": 69.5
+  }
+}

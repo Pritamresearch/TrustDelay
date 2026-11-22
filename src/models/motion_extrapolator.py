@@ -123,6 +123,12 @@ class MotionExtrapolator(nn.Module):
             extrap_cy = delayed_boxes[:, :, 1:2] + pred_vy * dt
             extrap_cz = delayed_boxes[:, :, 2:3]
             extrap_yaw = delayed_boxes[:, :, 6:7]
+        elif mode in ("projection_off", "projection_only_off", "none", "both_off"):
+            # Disables kinematic projection: p_hat = p (no velocity/acceleration/residual displacement)
+            extrap_cx = delayed_boxes[:, :, 0:1]
+            extrap_cy = delayed_boxes[:, :, 1:2]
+            extrap_cz = delayed_boxes[:, :, 2:3]
+            extrap_yaw = delayed_boxes[:, :, 6:7]
         else:
             # Full TrustDelay learned uncertainty-aware extrapolation: 2nd-order kinematics + learned residual
             extrap_cx = delayed_boxes[:, :, 0:1] + pred_vx * dt + 0.5 * pred_ax * (dt ** 2) + delta[:, :, 0:1]
@@ -143,8 +149,11 @@ class MotionExtrapolator(nn.Module):
         # Motion confidence in [0, 1]: decays with uncertainty
         motion_conf = torch.exp(-0.5 * scaled_sigma)
 
-        # Updated feature representation
-        updated_feats = self.feature_updater(torch.cat([query_feats, h], dim=-1))
+        # Updated feature representation (bypassed if feature_update_off or none/both_off)
+        if mode in ("feature_update_off", "feature_off", "none", "both_off"):
+            updated_feats = query_feats.clone()
+        else:
+            updated_feats = self.feature_updater(torch.cat([query_feats, h], dim=-1))
 
         return {
             "extrapolated_boxes": extrapolated_boxes,

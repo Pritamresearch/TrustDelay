@@ -1,0 +1,73 @@
+{
+  "experiment": "E5",
+  "description": "Gate Advantage across Bandwidth Budgets at 200 ms True Lag",
+  "git_commit": "09395864a6cbb7532e80ed25eedd21830a9bcd98",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+  "timestamp": "2026-11-23 00:23:28",
+  "operating_point": {
+    "delay_ms": 200.0,
+    "true_frame_lag": 2,
+    "budgets_kb": [
+      1.0,
+      5.0,
+      8.4
+    ]
+  },
+  "results": {
+    "1.0": {
+      "tokens": 8,
+      "gated": {
+        "AP@0.3": 50.29,
+        "AP@0.5": 2.03,
+        "AP@0.7": 0.05
+      },
+      "ungated": {
+        "AP@0.3": 47.21,
+        "AP@0.5": 2.88,
+        "AP@0.7": 0.06
+      },
+      "advantage": {
+        "abs_diff_pts": -0.85,
+        "rel_advantage_pct": -29.5
+      }
+    },
+    "5.0": {
+      "tokens": 40,
+      "gated": {
+        "AP@0.3": 53.13,
+        "AP@0.5": 10.73,
+        "AP@0.7": 0.75
+      },
+      "ungated": {
+        "AP@0.3": 47.33,
+        "AP@0.5": 5.29,
+        "AP@0.7": 0.13
+      },
+      "advantage": {
+        "abs_diff_pts": 5.44,
+        "rel_advantage_pct": 102.8
+      }
+    },
+    "8.4": {
+      "tokens": 67,
+      "gated": {
+        "AP@0.3": 52.22,
+        "AP@0.5": 11.14,
+        "AP@0.7": 0.83
+      },
+      "ungated": {
+        "AP@0.3": 49.21,
+        "AP@0.5": 4.4,
+        "AP@0.7": 0.11
+      },
+      "advantage": {
+        "abs_diff_pts": 6.74,
+        "rel_advantage_pct": 153.2
+      }
+    }
+  },
+  "analysis": {
+    "trend_summary": "At 1.0 KB (8 tokens), gate relative advantage is -29.5%. At 8.4 KB (67 tokens), gate relative advantage is +153.2%. Relative advantage SHRINKS as budget tightens.",
+    "supports_budget_framing": false
+  }
+}

@@ -65,7 +65,11 @@ class TrustDelayModel(nn.Module):
         pose_noise_rot: float = 0.0,
         bandwidth_budget_kb: int = 10,
         extrapolation_mode: Optional[str] = None,
-        fusion_type: Optional[str] = None
+        fusion_type: Optional[str] = None,
+        ignore_uncertainty: bool = False,
+        ignore_packet_mask: bool = False,
+        ignore_pose_noise: bool = False,
+        disable_collab_selection: bool = False
     ) -> Dict[str, Any]:
         """
         Pure neural inference pipeline.
@@ -110,8 +114,12 @@ class TrustDelayModel(nn.Module):
                 "log_var": None
             }
 
-        selected_indices, collab_scores = self.collab_selector(collabs_raw)
-        selected_collabs = [collabs_raw[i] for i in selected_indices]
+        if disable_collab_selection:
+            selected_indices = list(range(len(collabs_raw)))
+            selected_collabs = collabs_raw
+        else:
+            selected_indices, collab_scores = self.collab_selector(collabs_raw)
+            selected_collabs = [collabs_raw[i] for i in selected_indices]
 
         # -------------------------------------------------------------
         # Modules 3 & 4: Collaborator Processing, Extrapolation & Budget
@@ -213,6 +221,14 @@ class TrustDelayModel(nn.Module):
             masks_cat = torch.cat(gathered_packet_masks, dim=1)
             poses_cat = torch.cat(gathered_pose_mags, dim=1)
             log_vars_cat = torch.cat(gathered_collab_log_vars, dim=1) if gathered_collab_log_vars else None
+
+            # Ablation switches
+            if ignore_uncertainty:
+                sigmas_cat = torch.zeros_like(sigmas_cat)
+            if ignore_packet_mask:
+                masks_cat = torch.ones_like(masks_cat)
+            if ignore_pose_noise:
+                poses_cat = torch.zeros_like(poses_cat)
         else:
             collab_feats_cat = torch.empty((1, 0, self.feat_dim), device=device)
             collab_boxes_cat = torch.empty((1, 0, 7), device=device)

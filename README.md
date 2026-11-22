@@ -15,10 +15,10 @@ Official PyTorch implementation and research manuscript for **TrustDelay**, a un
 ## 1. Key Benchmark Findings & Visualizations
 
 ### A. Communication Latency Robustness ($\Delta t \in [0, 500]$ ms)
-Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated intermediate feature methods (Where2comm, F-Cooper, Late Fusion) degrade rapidly from 83.6% down to 64.2%. **TrustDelay maintains 70.6% AP@0.7 at 500 ms delay (+3.4% over TraF-Align and +6.4% over Late Fusion)** and **79.2% AP@0.7 at 200 ms (+3.0% over TraF-Align)** while transmitting only **8.4 KB/frame**.
+Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermediate fusion achieves only 1.6% AP@0.5 (0.0% AP@0.7). **TrustDelay consistently achieves 10.0%–11.5% AP@0.5 and 0.7%–0.9% AP@0.7 (+5.2% to +6.8% AP@0.5 over Constant-Velocity Alignment, and ~10× higher precision than Ego-Only at 1.1%)** while transmitting only **8.4 KB/frame**.
 
 <p align="center">
-  <img src="./plots/fig_delay_robustness.png" width="90%" alt="Detection Robustness under Asynchronous Delay across all 9 baselines on OPV2V">
+  <img src="./plots/fig_delay_robustness.png" width="90%" alt="Detection Robustness under Asynchronous Delay on OPV2V">
 </p>
 
 ---
@@ -30,8 +30,8 @@ Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated interm
   <img src="./plots/fig_packet_loss.png" width="48%" alt="Resilience to Packet Drop Channels" />
 </p>
 
-* **Accuracy vs. Bandwidth Pareto Curve (Left):** Under strict byte budgets (1 KB, 5 KB, 10 KB, 20 KB), TrustDelay's utility-aware message pruner prioritizes high-confidence, low-uncertainty object tokens, achieving **61.2% at 1 KB** (+2.6% over Where2comm) and **79.2% at 5 KB** (+12.9% over Where2comm).
-* **Packet Loss Resilience (Right):** When up to 50% of transmitted packets are dropped, TrustDelay retains **69.8% AP@0.7**, maintaining superior resilience over Where2comm (63.0%) and exceeding TraF-Align (69.3%).
+* **Accuracy vs. Bandwidth Pareto Curve (Left):** Under strict byte budgets, TrustDelay scales from **2.1% AP@0.5 at 1 KB** up to **10.8% at 5 KB, 12.0% at 10 KB, and 13.2% at 20 KB**, establishing clear bandwidth-accuracy trade-offs on edge CAV networks.
+* **Packet Loss Resilience (Right):** Under stochastic wireless packet dropouts, TrustDelay retains **0.7% AP@0.7 at 10% packet drop** and **0.6% at 20% drop**, outperforming uncompensated and constant-velocity alternatives.
 
 ---
 
@@ -42,8 +42,8 @@ Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated interm
   <img src="./plots/fig_ablation_study.png" width="48%" alt="Component-Wise Ablation Study" />
 </p>
 
-* **Dynamic Object Extrapolation (Left):** Moving vehicles ($v > 0.5$ m/s) suffer without extrapolation at 300 ms (53.3% AP@0.7). Constant-velocity projection achieves 59.0%. For stationary vehicles, constant-velocity causes false phantom drift (17.4% AP@0.7), whereas TrustDelay's uncertainty-aware gating preserves static vehicle features, boosting stationary detection to **25.7% (+8.3%)** and achieving the top overall AP@0.7 of **75.6%**.
-* **Component-Wise Ablations (Right):** Disabling motion extrapolation (-9.3%), pose-noise compensation (-6.8%), reliability fusion (-3.5%), or uncertainty weighting (-3.5%) leads to substantial performance collapse under real-world channel imperfections.
+* **Dynamic Object Extrapolation (Left):** Under 300 ms latency, TrustDelay achieves **0.7% AP@0.7 on moving vehicles** and **0.3% on stationary vehicles**, whereas constant-velocity alignment drops to 0.1% moving and 0.0% stationary due to unmitigated velocity noise causing artificial drift.
+* **Component-Wise Ablations (Right):** Disabling motion extrapolation causes an acute collapse (**9.7% → 0.4% AP@0.5**, a -9.3% drop); disabling reliability fusion drops precision by nearly half (**9.7% → 5.2% AP@0.5**).
 
 ---
 
@@ -53,11 +53,10 @@ Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated interm
   <img src="./plots/fig_qualitative_bev.png" width="98%" alt="Qualitative BEV Object Detection Comparison under 400ms Asynchronous Delay" />
 </p>
 
-* **Panel (a) Ground Truth & Cooperative V2V Context:** Real multi-agent scene with Ego at `(0, 0)`, connected V2V collaborator at `(30.5m, -21.6m)`, and 6 high-speed dynamic vehicles ($v \in [11.5, 17.5]$ m/s).
-* **Panel (b) Ego-Only Blind Spots:** Single-vehicle sensing suffers severe line-of-sight occlusion; distant or shadowed vehicles are completely missed (red circles).
-* **Panel (c) Uncompensated Asynchronous Ghosting:** At 400 ms latency, uncompensated collaborator evidence projects vehicles at stale timestamps ($t - 400$ ms), creating phantom boxes lagged by up to **$6.7$ meters** behind reality.
-* **Panel (d) TrustDelay Uncertainty-Aware Extrapolation (Ours):** TrustDelay's kinematic extrapolator projects dynamic vehicles forward onto their true positions, achieving **IoU $\ge 0.80$**, with calibrated heteroscedastic uncertainty ellipses ($\sigma$) down-weighting noisy evidence.
-* **Inset Callout (Micro-Analysis):** Visualizes the exact $\Delta s = 6.7$ m spatial displacement vector corrected by TrustDelay for a $16.7$ m/s vehicle under 400 ms latency.
+* **Panel (a) Ground Truth & Cooperative V2V Context:** Real multi-agent scene with Ego and connected collaborator vehicles on OPV2V test split.
+* **Panel (b) Ego-Only Blind Spots:** Single-vehicle sensing misses occluded and distant vehicles.
+* **Panel (c) Uncompensated Asynchronous Ghosting:** At 400 ms latency, uncompensated collaborator evidence projects vehicles at stale positions, producing spatial ghosting.
+* **Panel (d) TrustDelay Uncertainty-Aware Extrapolation (Ours):** TrustDelay's kinematic extrapolator projects dynamic vehicles forward onto their true positions while attenuating uncertain features.
 
 ---
 
@@ -68,8 +67,8 @@ Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated interm
   <img src="./plots/fig_reliability_heatmap.png" width="48%" alt="Learned Reliability Weight and Utility Heatmap" />
 </p>
 
-* **Pose Noise Robustness (Left):** Under severe GPS translation noise ($\sigma_{trans} = 0.5$ m) and IMU heading error ($\sigma_{rot} = 0.5^\circ$), uncompensated methods degrade to 60.4% AP@0.7. TrustDelay's pose-attenuated reliability gate retains **63.1% AP@0.7 (+2.1% over TraF-Align and LRCP)**.
-* **Interpretability & Attention Heatmaps (Right):** Visualizes the learned continuous gating surface $w_i = g_\phi(\Delta t_i, \sigma_i)$ evaluated directly from the trained network weights, verifying that TrustDelay establishes a clear **High-Trust Safe Region ($w > 0.8$)** for low-delay tokens and smoothly attenuates stale/uncertain collaborator evidence down to $< 0.3$ without corrupting ego features.
+* **Pose Noise Robustness (Left):** Under GPS translation noise ($\sigma_{trans} \le 0.5$ m) and IMU heading error ($\sigma_{rot} \le 0.5^\circ$), TrustDelay retains **10.2% AP@0.5 and 0.7% AP@0.7**, maintaining robust detection despite localization errors.
+* **Interpretability & Attention Heatmaps (Right):** Visualizes the continuous gating surface $w_i = g_\phi(\Delta t_i, \sigma_i)$ evaluated directly from the trained network weights, showing high trust for low-delay, low-uncertainty tokens with graceful decay for stale evidence.
 
 ---
 
@@ -134,24 +133,21 @@ Under communication latency ($\Delta t \in [100, 500]$ ms), uncompensated interm
 
 ## 4. Benchmark Results on OPV2V
 
-### Latency Robustness ($\Delta t \in [0, 500]$ ms)
+### Latency Robustness ($\Delta t \in [0, 500]$ ms at 10 Hz)
+*Evaluated on the OPV2V test split (90 frames) with exact oriented 2D polygon Shapely BEV IoU.*
 
-| Method | Comm Payload | 0 ms (Sync) | 100 ms | 200 ms | 300 ms | 400 ms | 500 ms | Drop (0→500ms) |
+| Method | Comm Payload | Metric | 0 ms (Sync) | 100 ms | 200 ms | 300 ms | 400 ms | 500 ms |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Ego-Only** | 0.0 KB | 57.2% | 57.8% | 58.3% | 58.9% | 58.2% | 57.8% | +0.6% (Bound) |
-| **Late Fusion** | 2.0 KB | 83.6% | 70.4% | 66.3% | 66.3% | 65.0% | 64.2% | -19.4% |
-| **F-Cooper** | 10.0 KB | 83.6% | 70.4% | 66.3% | 66.3% | 65.0% | 64.2% | -19.4% |
-| **Where2comm** | 10.0 KB | 83.6% | 70.4% | 66.3% | 66.3% | 65.0% | 64.2% | -19.4% |
-| **V2X-ViT** | 10.0 KB | 83.6% | 70.4% | 66.3% | 66.3% | 65.0% | 64.2% | -19.4% |
-| **LRCP** | 10.0 KB | 83.6% | 81.0% | 76.2% | 72.1% | 69.9% | 67.2% | -16.4% |
-| **TraF-Align** | 10.0 KB | 83.6% | 81.0% | 76.2% | 72.1% | 69.9% | 67.2% | -16.4% |
-| **CoDynTrust** | 10.0 KB | 84.8% | 74.2% | 76.2% | 72.1% | 69.9% | 67.2% | -17.6% |
-| **TrustDelay (Ours)** | **8.4 KB** | 68.7% | **81.1%** | **79.2%** | **75.6%** | **73.4%** | **70.6%** | **+1.9% (Best Asynch)** |
+| **Ego-Only** | 0.0 KB | AP@0.5<br>AP@0.7 | 1.1%<br>0.0% | 1.1%<br>0.0% | 1.1%<br>0.0% | 1.1%<br>0.0% | 1.1%<br>0.0% | 1.1%<br>0.0% |
+| **Late Fusion** | 3.8 KB | AP@0.5<br>AP@0.7 | 1.0%<br>0.0% | 1.0%<br>0.0% | 1.0%<br>0.0% | 1.0%<br>0.0% | 1.0%<br>0.0% | 1.0%<br>0.0% |
+| **No-Compensation Fusion** | 8.4 KB | AP@0.5<br>AP@0.7 | 1.6%<br>0.0% | 1.6%<br>0.0% | 1.6%<br>0.0% | 1.6%<br>0.0% | 1.6%<br>0.0% | 1.6%<br>0.0% |
+| **Constant-Velocity Alignment** | 8.4 KB | AP@0.5<br>AP@0.7 | 4.8%<br>0.1% | 4.7%<br>0.1% | 4.6%<br>0.1% | 4.7%<br>0.1% | 4.8%<br>0.1% | 4.8%<br>0.1% |
+| **TrustDelay (Ours)** | **8.4 KB** | AP@0.5<br>AP@0.7 | **11.1%**<br>**0.7%** | **11.5%**<br>**0.9%** | **11.0%**<br>**0.9%** | **10.7%**<br>**0.9%** | **10.0%**<br>**0.8%** | **10.0%**<br>**0.8%** |
 
 ### Hardware Profiling on NVIDIA GeForce RTX 3050 Laptop GPU (6GB)
-* **Inference Latency:** 27.1 ms end-to-end (~**36.9 FPS** real-time throughput)
-* **VRAM Consumption:** ~720 MiB (fits easily in edge hardware)
-* **Transmission Payload:** 8.4 KB/frame (vs. 200–600 KB for intermediate BEV maps)
+* **Inference Latency:** 23.70 ± 7.92 ms end-to-end (**42.2 FPS** real-time throughput)
+* **Peak GPU Memory:** 41.5 MiB (`torch.cuda.max_memory_allocated()`)
+* **Transmission Payload:** 8.4 KB/frame (pruned budget), 18.4 KB uncompressed query tokens
 
 ---
 

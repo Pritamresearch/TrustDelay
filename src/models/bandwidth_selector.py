@@ -37,7 +37,7 @@ class BandwidthMessageSelector(nn.Module):
         Returns selected tokens, boxes, transmission volume, and packet mask.
         """
         B, N, C = query_feats.shape
-        max_tokens = min(N, self.compute_max_tokens_for_budget(budget_kb))
+        max_tokens = max(1, min(N, int(self.compute_max_tokens_for_budget(budget_kb))))
 
         # Information utility score: high object confidence, low motion uncertainty
         # Tokens with high confidence and low uncertainty are prioritized

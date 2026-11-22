@@ -3,6 +3,8 @@ Module 1: Ego Perception Encoder & Anchor Query Generator.
 Extracts compact BEV features and candidate 3D queries from ego sensor observations.
 """
 from __future__ import annotations
+import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,29 +51,38 @@ class BEVEncoder(nn.Module):
 
 class QueryGenerator(nn.Module):
     """
-    Extracts sparse 3D candidate queries from BEV feature maps.
+    Extracts sparse 3D candidate queries from BEV feature maps using differentiable grid anchor sampling.
     Generates (B, num_queries, feat_dim) and initial bounding box candidates (B, num_queries, 7).
     """
-    def __init__(self, feat_dim: int = 64, num_queries: int = 64, grid_w: int = 100, grid_h: int = 100):
+    def __init__(self, feat_dim: int = 64, num_queries: int = 121, grid_w: int = 100, grid_h: int = 100):
         super().__init__()
+        import math
         self.feat_dim = feat_dim
         self.num_queries = num_queries
         self.grid_w = grid_w
         self.grid_h = grid_h
 
-        # Heatmap head for spatial object priors
-        self.heatmap_head = nn.Sequential(
-            nn.Conv2d(feat_dim, 32, kernel_size=3, padding=1),
+        # Compute fixed 2D grid anchors in metric coordinates [-42, 42] x [-42, 42]
+        side = int(round(math.sqrt(num_queries)))
+        xs = np.linspace(-42.0, 42.0, side, dtype=np.float32)
+        ys = np.linspace(-42.0, 42.0, side, dtype=np.float32)
+        gx, gy = np.meshgrid(xs, ys, indexing="ij")
+        grid_pts = np.stack([gx.flatten(), gy.flatten()], axis=-1)  # (N, 2)
+        self.register_buffer("grid_anchors", torch.from_numpy(grid_pts))
+
+        # Query feature projection and refinement
+        self.feat_mlp = nn.Sequential(
+            nn.Linear(feat_dim, feat_dim),
+            nn.LayerNorm(feat_dim),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 1, kernel_size=1)
+            nn.Linear(feat_dim, feat_dim)
         )
-        
-        # Bounding box attribute head: [cx, cy, cz, dx, dy, dz, yaw]
-        self.box_head = nn.Sequential(
-            nn.Conv2d(feat_dim, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 7, kernel_size=1)
-        )
+        self.score_head = nn.Linear(feat_dim, 1)
+        self.box_head = nn.Linear(feat_dim, 7)
+
+        # Initialize box head to small residuals
+        nn.init.zeros_(self.box_head.weight)
+        nn.init.zeros_(self.box_head.bias)
 
     def forward(self, bev_feat: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -81,40 +92,32 @@ class QueryGenerator(nn.Module):
             query_scores: (B, num_queries)
         """
         B, C, H, W = bev_feat.shape
-        heatmap = torch.sigmoid(self.heatmap_head(bev_feat))  # (B, 1, H, W)
-        box_maps = self.box_head(bev_feat)                   # (B, 7, H, W)
+        device = bev_feat.device
+        anchors = self.grid_anchors.to(device)  # (N, 2) in meters [-42, 42]
+        N = anchors.shape[0]
 
-        # Flatten spatial dimensions
-        flat_heat = heatmap.view(B, -1)                      # (B, H*W)
-        flat_feat = bev_feat.flatten(2).permute(0, 2, 1)     # (B, H*W, C)
-        flat_boxes = box_maps.flatten(2).permute(0, 2, 1)    # (B, H*W, 7)
+        # Normalized coordinates for F.grid_sample: [-1, 1]
+        # x corresponds to row/H, y corresponds to col/W
+        norm_x = (anchors[:, 0] / 50.0).clamp(-1.0, 1.0)
+        norm_y = (anchors[:, 1] / 50.0).clamp(-1.0, 1.0)
+        # grid_sample expects (x, y) where x is horizontal/col/W and y is vertical/row/H
+        grid = torch.stack([norm_y, norm_x], dim=-1).unsqueeze(0).unsqueeze(2).expand(B, -1, -1, -1)  # (B, N, 1, 2)
 
-        # Top-K query sampling based on heatmap response
-        k = min(self.num_queries, flat_heat.shape[1])
-        top_scores, top_indices = torch.topk(flat_heat, k=k, dim=1)
+        # Differentiable feature sampling at anchor locations
+        sampled = F.grid_sample(bev_feat, grid, align_corners=True).squeeze(-1).permute(0, 2, 1)  # (B, N, C)
+        query_feats = self.feat_mlp(sampled)
 
-        idx_expanded_feat = top_indices.unsqueeze(-1).expand(-1, -1, C)
-        idx_expanded_box = top_indices.unsqueeze(-1).expand(-1, -1, 7)
+        scores = torch.sigmoid(self.score_head(query_feats)).squeeze(-1)  # (B, N)
+        res = self.box_head(query_feats)  # (B, N, 7)
 
-        queries = torch.gather(flat_feat, 1, idx_expanded_feat)
-        raw_boxes = torch.gather(flat_boxes, 1, idx_expanded_box)
-
-        # Re-center coordinates in metric ego frame (out-of-place)
-        # row index (top_indices // W) corresponds to metric X (forward)
-        # col index (top_indices % W) corresponds to metric Y (lateral)
-        xs = (top_indices // W).float() / float(H) * 100.0 - 50.0
-        ys = (top_indices % W).float() / float(W) * 100.0 - 50.0
-
-        cx = raw_boxes[:, :, 0:1] + xs.unsqueeze(-1)
-        cy = raw_boxes[:, :, 1:2] + ys.unsqueeze(-1)
-        cz = raw_boxes[:, :, 2:3]
-
-        # Vehicle 3D anchor dimension priors (OPV2V average: dx=4.6m, dy=2.1m, dz=1.6m)
-        dx = torch.exp(torch.clamp(raw_boxes[:, :, 3:4], -1.5, 1.5)) * 4.6
-        dy = torch.exp(torch.clamp(raw_boxes[:, :, 4:5], -1.5, 1.5)) * 2.1
-        dz = torch.exp(torch.clamp(raw_boxes[:, :, 5:6], -1.5, 1.5)) * 1.6
-        yaw = raw_boxes[:, :, 6:7]
+        # Reconstruct metric 3D boxes from grid anchors and learned residuals
+        cx = anchors[:, 0:1].unsqueeze(0) + res[:, :, 0:1]
+        cy = anchors[:, 1:2].unsqueeze(0) + res[:, :, 1:2]
+        cz = -1.2 + res[:, :, 2:3]
+        dx = 4.6 * torch.exp(torch.clamp(res[:, :, 3:4], -1.0, 1.0))
+        dy = 2.1 * torch.exp(torch.clamp(res[:, :, 4:5], -1.0, 1.0))
+        dz = 1.6 * torch.exp(torch.clamp(res[:, :, 5:6], -1.0, 1.0))
+        yaw = res[:, :, 6:7]
 
         query_boxes = torch.cat([cx, cy, cz, dx, dy, dz, yaw], dim=-1)
-
-        return queries, query_boxes, top_scores
+        return query_feats, query_boxes, scores

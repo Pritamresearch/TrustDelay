@@ -1,98 +1,87 @@
 {
-  "Full TrustDelay (Ours)": {
-    "AP@0.3": 83.5659371845407,
-    "AP@0.5": 81.74361638194944,
-    "AP@0.7": 75.55162766444036,
-    "AP@0.3_moving": 65.78326004026911,
-    "AP@0.5_moving": 64.60164329074456,
-    "AP@0.7_moving": 58.6942101531634,
-    "AP@0.3_stationary": 26.346137304675153,
-    "AP@0.5_stationary": 25.681757478632477,
-    "AP@0.7_stationary": 25.681757478632477,
-    "comm_kb": 8.4
-  },
-  "w/o Motion Extrapolation": {
-    "AP@0.3": 72.57667757975503,
-    "AP@0.5": 67.10116588881733,
-    "AP@0.7": 66.3187337231078,
-    "AP@0.3_moving": 58.70316190275883,
-    "AP@0.5_moving": 53.90052236329458,
-    "AP@0.7_moving": 53.34812370363839,
-    "AP@0.3_stationary": 18.43568456531721,
-    "AP@0.5_stationary": 17.99999539297412,
-    "AP@0.7_stationary": 17.741805039099837,
-    "comm_kb": 8.4
-  },
-  "w/o Uncertainty Weighting": {
-    "AP@0.3": 80.593983003981,
-    "AP@0.5": 78.81905812744753,
-    "AP@0.7": 72.0777040537998,
-    "AP@0.3_moving": 66.8073612190722,
-    "AP@0.5_moving": 65.65159271571343,
-    "AP@0.7_moving": 59.03171905956937,
-    "AP@0.3_stationary": 18.080350822278334,
-    "AP@0.5_stationary": 17.39583182320894,
-    "AP@0.7_stationary": 17.39583182320894,
-    "comm_kb": 8.4
-  },
-  "w/o Packet-Loss Handling": {
-    "AP@0.3": 80.593983003981,
-    "AP@0.5": 78.81905812744753,
-    "AP@0.7": 72.0777040537998,
-    "AP@0.3_moving": 66.8073612190722,
-    "AP@0.5_moving": 65.65159271571343,
-    "AP@0.7_moving": 59.03171905956937,
-    "AP@0.3_stationary": 18.080350822278334,
-    "AP@0.5_stationary": 17.39583182320894,
-    "AP@0.7_stationary": 17.39583182320894,
-    "comm_kb": 8.4
-  },
-  "w/o Pose-Noise Compensation": {
-    "AP@0.3": 80.60931995082208,
-    "AP@0.5": 77.14438518824971,
-    "AP@0.7": 68.76320773861926,
-    "AP@0.3_moving": 66.82238725372274,
-    "AP@0.5_moving": 63.99818404514228,
-    "AP@0.7_moving": 56.539724393190305,
-    "AP@0.3_stationary": 18.080350822278334,
-    "AP@0.5_stationary": 17.39583182320894,
-    "AP@0.7_stationary": 16.583513305742077,
-    "comm_kb": 8.4
-  },
-  "w/o Collaborator Selection": {
-    "AP@0.3": 83.5659371845407,
-    "AP@0.5": 81.74361638194944,
-    "AP@0.7": 75.55162766444036,
-    "AP@0.3_moving": 65.78326004026911,
-    "AP@0.5_moving": 64.60164329074456,
-    "AP@0.7_moving": 58.6942101531634,
-    "AP@0.3_stationary": 26.346137304675153,
-    "AP@0.5_stationary": 25.681757478632477,
-    "AP@0.7_stationary": 25.681757478632477,
-    "comm_kb": 24.6
-  },
-  "w/o Message Compression": {
-    "AP@0.3": 83.5659371845407,
-    "AP@0.5": 81.74361638194944,
-    "AP@0.7": 75.55162766444036,
-    "AP@0.3_moving": 65.78326004026911,
-    "AP@0.5_moving": 64.60164329074456,
-    "AP@0.7_moving": 58.6942101531634,
-    "AP@0.3_stationary": 26.346137304675153,
-    "AP@0.5_stationary": 25.681757478632477,
-    "AP@0.7_stationary": 25.681757478632477,
-    "comm_kb": 38.2
-  },
-  "w/o Reliability Fusion": {
-    "AP@0.3": 80.593983003981,
-    "AP@0.5": 78.81905812744753,
-    "AP@0.7": 72.0777040537998,
-    "AP@0.3_moving": 66.8073612190722,
-    "AP@0.5_moving": 65.65159271571343,
-    "AP@0.7_moving": 59.03171905956937,
-    "AP@0.3_stationary": 18.080350822278334,
-    "AP@0.5_stationary": 17.39583182320894,
-    "AP@0.7_stationary": 17.39583182320894,
-    "comm_kb": 8.4
+  "git_commit": "c08f9eeef6a6f6fc39d428fa10cf8c0deb8a10d4",
+  "date": "2026-11-22 16:19:41",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "dataset_split": "test (90 frames, Culver City)",
+  "delay_ms": 300.0,
+  "stress_conditions": "packet_loss=0.10, pose_noise=0.1m/0.1deg",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "variants": {
+    "Full TrustDelay (Ours)": {
+      "AP@0.3": 51.7,
+      "AP@0.3_std": 0.23,
+      "AP@0.5": 9.71,
+      "AP@0.5_std": 0.12,
+      "AP@0.7": 0.65,
+      "AP@0.7_std": 0.05,
+      "comm_kb": 8.4
+    },
+    "w/o Motion Extrapolation": {
+      "AP@0.3": 46.57,
+      "AP@0.3_std": 0.56,
+      "AP@0.5": 0.42,
+      "AP@0.5_std": 0.05,
+      "AP@0.7": 0.0,
+      "AP@0.7_std": 0.0,
+      "comm_kb": 8.4
+    },
+    "w/o Uncertainty Weighting": {
+      "AP@0.3": 51.65,
+      "AP@0.3_std": 0.13,
+      "AP@0.5": 10.56,
+      "AP@0.5_std": 0.23,
+      "AP@0.7": 0.68,
+      "AP@0.7_std": 0.05,
+      "comm_kb": 8.4
+    },
+    "w/o Packet-Loss Handling": {
+      "AP@0.3": 51.7,
+      "AP@0.3_std": 0.23,
+      "AP@0.5": 9.71,
+      "AP@0.5_std": 0.12,
+      "AP@0.7": 0.65,
+      "AP@0.7_std": 0.05,
+      "comm_kb": 8.4
+    },
+    "w/o Pose-Noise Compensation": {
+      "AP@0.3": 51.67,
+      "AP@0.3_std": 0.24,
+      "AP@0.5": 9.9,
+      "AP@0.5_std": 0.19,
+      "AP@0.7": 0.69,
+      "AP@0.7_std": 0.06,
+      "comm_kb": 8.4
+    },
+    "w/o Collaborator Selection": {
+      "AP@0.3": 51.7,
+      "AP@0.3_std": 0.23,
+      "AP@0.5": 9.71,
+      "AP@0.5_std": 0.12,
+      "AP@0.7": 0.65,
+      "AP@0.7_std": 0.05,
+      "comm_kb": 8.4
+    },
+    "w/o Message Compression": {
+      "AP@0.3": 53.16,
+      "AP@0.3_std": 0.32,
+      "AP@0.5": 11.69,
+      "AP@0.5_std": 0.34,
+      "AP@0.7": 0.69,
+      "AP@0.7_std": 0.03,
+      "comm_kb": 15.1
+    },
+    "w/o Reliability Fusion": {
+      "AP@0.3": 47.33,
+      "AP@0.3_std": 0.29,
+      "AP@0.5": 5.19,
+      "AP@0.5_std": 0.19,
+      "AP@0.7": 0.14,
+      "AP@0.7_std": 0.0,
+      "comm_kb": 8.4
+    }
   }
 }

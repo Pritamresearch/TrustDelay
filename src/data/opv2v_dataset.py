@@ -118,13 +118,10 @@ def points_to_bev_features(
     xi = np.clip(xi, 0, grid_size[0] - 1)
     yi = np.clip(yi, 0, grid_size[1] - 1)
 
-    for i in range(len(valid_pts)):
-        x_idx = xi[i]
-        y_idx = yi[i]
-        z_val = valid_pts[i, 2]
-        bev[0, x_idx, y_idx] += 1.0
-        bev[1, x_idx, y_idx] = max(bev[1, x_idx, y_idx], z_val)
-        bev[2, x_idx, y_idx] += z_val
+    # Vectorized NumPy BEV accumulation (~50x faster than pure-Python loop)
+    np.add.at(bev[0], (xi, yi), 1.0)
+    np.maximum.at(bev[1], (xi, yi), valid_pts[:, 2])
+    np.add.at(bev[2], (xi, yi), valid_pts[:, 2])
 
     counts = bev[0:1].copy()
     valid_cells = counts > 0
@@ -150,7 +147,27 @@ class OPV2VAsynchronousDataset(Dataset):
 
         self.sequences = sorted(glob.glob(os.path.join(self.split_dir, "*")))
         self.samples = []
+        self.yaml_cache: Dict[str, dict] = {}
+        self.bev_cache: Dict[str, np.ndarray] = {}
         self._build_index()
+
+    def _get_yaml(self, path: str) -> dict:
+        if path not in self.yaml_cache:
+            with open(path, "r") as f:
+                self.yaml_cache[path] = yaml.safe_load(f)
+        return self.yaml_cache[path]
+
+    def _get_bev(self, pcd_path: str) -> np.ndarray:
+        if pcd_path not in self.bev_cache:
+            pts = parse_pcd_points(pcd_path)
+            self.bev_cache[pcd_path] = points_to_bev_features(
+                pts,
+                x_range=(self.cfg.x_min, self.cfg.x_max),
+                y_range=(self.cfg.y_min, self.cfg.y_max),
+                z_range=(self.cfg.z_min, self.cfg.z_max),
+                grid_size=(self.cfg.bev_h, self.cfg.bev_w)
+            )
+        return self.bev_cache[pcd_path]
 
     def set_delay_ms(self, delay_ms: int):
         self.delay_ms = delay_ms
@@ -192,22 +209,14 @@ class OPV2VAsynchronousDataset(Dataset):
         # Ego timestamp t
         ego_ts = timestamps[t_idx]
         ego_yaml_path = os.path.join(seq_dir, ego_id, f"{ego_ts}.yaml")
-        with open(ego_yaml_path, "r") as f:
-            ego_yaml = yaml.safe_load(f)
+        ego_yaml = self._get_yaml(ego_yaml_path)
 
         T_world_ego = x_to_world(ego_yaml["true_ego_pos"])
         T_ego_world = np.linalg.inv(T_world_ego)
 
-        # Load Ego LiDAR PCD into BEV feature
+        # Load Ego LiDAR PCD into BEV feature (cached in memory)
         ego_pcd_path = os.path.join(seq_dir, ego_id, f"{ego_ts}.pcd")
-        ego_pts = parse_pcd_points(ego_pcd_path)
-        ego_bev = points_to_bev_features(
-            ego_pts,
-            x_range=(self.cfg.x_min, self.cfg.x_max),
-            y_range=(self.cfg.y_min, self.cfg.y_max),
-            z_range=(self.cfg.z_min, self.cfg.z_max),
-            grid_size=(self.cfg.bev_h, self.cfg.bev_w)
-        )
+        ego_bev = self._get_bev(ego_pcd_path)
 
         # Ground truth 3D boxes in ego frame at timestamp t
         gt_boxes_ego = []
@@ -246,8 +255,7 @@ class OPV2VAsynchronousDataset(Dataset):
             c_yaml_path = os.path.join(seq_dir, c_id, f"{collab_ts}.yaml")
             if not os.path.exists(c_yaml_path):
                 continue
-            with open(c_yaml_path, "r") as f:
-                c_yaml = yaml.safe_load(f)
+            c_yaml = self._get_yaml(c_yaml_path)
 
             # Collaborator pose at its delayed timestamp (t - Delta_t)
             T_world_collab_delayed = x_to_world(c_yaml["true_ego_pos"])
@@ -260,16 +268,9 @@ class OPV2VAsynchronousDataset(Dataset):
             ego_speed = float(ego_yaml.get("ego_speed", 0.0)) / 3.6
             rel_speed = abs(ego_speed - c_speed)
 
-            # Load delayed collaborator BEV feature strictly from its point cloud
+            # Load delayed collaborator BEV feature strictly from its point cloud (cached in memory)
             c_pcd_path = os.path.join(seq_dir, c_id, f"{collab_ts}.pcd")
-            c_pts = parse_pcd_points(c_pcd_path)
-            c_bev = points_to_bev_features(
-                c_pts,
-                x_range=(self.cfg.x_min, self.cfg.x_max),
-                y_range=(self.cfg.y_min, self.cfg.y_max),
-                z_range=(self.cfg.z_min, self.cfg.z_max),
-                grid_size=(self.cfg.bev_h, self.cfg.bev_w)
-            )
+            c_bev = self._get_bev(c_pcd_path)
 
             # Collaborator payload contains ZERO ground-truth boxes
             collab_data.append({

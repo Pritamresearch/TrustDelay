@@ -1,39 +1,70 @@
 """
 Systematic Ablation Study for TrustDelay.
-Evaluates 8 architectural variants directly on the real OPV2V Culver City dataset at 300ms delay:
+Evaluates 8 architectural variants on the OPV2V test split under identical perturbations (at 300 ms delay):
   1. Full TrustDelay (Ours)
-  2. w/o Motion Extrapolation
-  3. w/o Uncertainty Weighting
-  4. w/o Packet-Loss Handling
-  5. w/o Pose-Noise Compensation
-  6. w/o Collaborator Selection
-  7. w/o Message Compression
-  8. w/o Reliability-Weighted Fusion
-Saves 100% computed results to results/ablation_results.json.
+  2. w/o Motion Extrapolation (extrapolation_mode='none')
+  3. w/o Uncertainty Weighting (ignore motion uncertainty in gating)
+  4. w/o Packet-Loss Handling (ignore loss masks in gating)
+  5. w/o Pose-Noise Compensation (ignore pose noise magnitude in gating)
+  6. w/o Collaborator Selection (all collabs transmitted, disable selector)
+  7. w/o Message Compression (uncompressed token transmission, budget 100 KB)
+  8. w/o Reliability Fusion (equal uniform feature weighting)
+
+Computes mean ± std over 3 fixed seeds and outputs to results/ablation_results.json.
 """
 from __future__ import annotations
 import os
 import sys
+import time
 import json
-import yaml
-import math
+import argparse
+import subprocess
 import numpy as np
+import torch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.data.opv2v_dataset import x_to_world
+from configs.config import TrustDelayConfig
+from src.data.opv2v_dataset import OPV2VAsynchronousDataset
+from src.models.trust_delay_model import TrustDelayModel
 from src.utils.metrics import DetectionEvaluator
 
+def get_git_commit() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
+    except Exception:
+        return "unknown"
+
 def run_ablations():
-    root = r"C:\PhD\Collaborative autonomy\coop_v2v\coop_v2v\test_culver_city\test\2021_09_03_09_32_17"
-    print(f"=== Initializing Live Ablation Study on {root} ===")
+    parser = argparse.ArgumentParser(description="Run TrustDelay systematic ablation study")
+    parser.add_argument("--checkpoint", type=str, default="results/checkpoints/trustdelay_best.pth")
+    parser.add_argument("--data_root", type=str, default=None)
+    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 43, 44])
+    parser.add_argument("--output", type=str, default="results/ablation_results.json")
+    args = parser.parse_args()
 
-    yamls_ego = sorted([f for f in os.listdir(os.path.join(root, "302")) if f.endswith(".yaml")])
-    yamls_collab = sorted([f for f in os.listdir(os.path.join(root, "311")) if f.endswith(".yaml")])
+    cfg = TrustDelayConfig()
+    if args.data_root:
+        cfg.data_root = args.data_root
+    device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
+    git_commit = get_git_commit()
 
+    print(f"=== Initializing Honest Ablation Study (Commit: {git_commit[:8]}) ===")
+    print(f"Loading checkpoint: {args.checkpoint}")
+    model = TrustDelayModel(cfg).to(device)
+    if os.path.exists(args.checkpoint):
+        state_dict = torch.load(args.checkpoint, map_location=device)
+        model.load_state_dict(state_dict)
+        print("  --> Model weights successfully loaded.")
+    else:
+        print(f"  [WARNING] Checkpoint {args.checkpoint} not found. Running with initial weights.")
+
+    model.eval()
+    test_dataset = OPV2VAsynchronousDataset(cfg, split="test")
+    print(f"Preloading test dataset into RAM cache ({len(test_dataset)} frames)...")
+    for i in range(len(test_dataset)):
+        _ = test_dataset[i]
+    print(f"Preload complete. Cached {len(test_dataset.bev_cache)} BEV feature maps in memory.")
     evaluator = DetectionEvaluator(iou_thresholds=[0.3, 0.5, 0.7])
-    k_step = 9 # 300 ms delay
-    dt = 0.300
-    num_eval_frames = 25
 
     variants = [
         "Full TrustDelay (Ours)",
@@ -46,101 +77,103 @@ def run_ablations():
         "w/o Reliability Fusion"
     ]
 
-    ablation_records = {}
+    ablation_records = {
+        "git_commit": git_commit,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "checkpoint_path": args.checkpoint,
+        "dataset_split": f"test ({len(test_dataset)} frames, Culver City)",
+        "delay_ms": 300.0,
+        "stress_conditions": "packet_loss=0.10, pose_noise=0.1m/0.1deg",
+        "seeds": args.seeds,
+        "variants": {}
+    }
 
+    delay_ms = 300.0
+    p_loss = 0.10
+    pose_trans = 0.1
+    pose_rot = 0.1
+
+    print("\n--- Running 8-Variant Ablation Suite at 300 ms Delay ---")
     for var in variants:
-        evaluator.reset()
-        comm_kb = 8.4
+        seed_03 = []
+        seed_05 = []
+        seed_07 = []
+        comm_kbs = []
 
-        for i in range(min(num_eval_frames, len(yamls_ego) - k_step)):
-            idx_curr = i + k_step
-            idx_del = i
-            with open(os.path.join(root, "302", yamls_ego[idx_curr])) as f:
-                ego_curr = yaml.safe_load(f)
-            with open(os.path.join(root, "311", yamls_collab[idx_del])) as f:
-                collab_del = yaml.safe_load(f)
+        for seed in args.seeds:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            evaluator.reset()
 
-            T_world_ego = x_to_world(ego_curr["true_ego_pos"])
-            T_ego_world = np.linalg.inv(T_world_ego)
+            for idx in range(len(test_dataset)):
+                sample = test_dataset[idx]
+                gt_boxes = sample["gt_boxes"].numpy()
+                gt_moving = sample["gt_is_moving"].numpy()
 
-            gt_boxes, gt_moving = [], []
-            for v in ego_curr["vehicles"].values():
-                loc, ext, ang, spd = v["location"], v["extent"], v["angle"], v["speed"]
-                pt_w = np.array([loc[0], loc[1], loc[2], 1.0])
-                pt_e = (T_ego_world @ pt_w)[:3]
-                yaw_e = math.radians(ang[1] - ego_curr["true_ego_pos"][4])
-                gt_boxes.append([pt_e[0], pt_e[1], pt_e[2], ext[0]*2, ext[1]*2, ext[2]*2, yaw_e])
-                gt_moving.append(spd > 0.5)
-            gt_boxes = np.array(gt_boxes)
-            gt_moving = np.array(gt_moving)
+                with torch.inference_mode():
+                    if var == "Full TrustDelay (Ours)":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4)
+                    elif var == "w/o Motion Extrapolation":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    extrapolation_mode="none")
+                    elif var == "w/o Uncertainty Weighting":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    ignore_uncertainty=True)
+                    elif var == "w/o Packet-Loss Handling":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    ignore_packet_mask=True)
+                    elif var == "w/o Pose-Noise Compensation":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    ignore_pose_noise=True)
+                    elif var == "w/o Collaborator Selection":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    disable_collab_selection=True)
+                    elif var == "w/o Message Compression":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=100.0)
+                    elif var == "w/o Reliability Fusion":
+                        out = model(sample, delay_override_ms=delay_ms, packet_loss_override=p_loss,
+                                    pose_noise_trans=pose_trans, pose_noise_rot=pose_rot, bandwidth_budget_kb=8.4,
+                                    fusion_type="uniform")
 
-            dist_e = np.linalg.norm(gt_boxes[:, :2], axis=-1)
-            ego_vis = gt_boxes[dist_e < 25.0]
+                p_boxes = out["pred_boxes"][0].cpu().numpy()
+                p_logits = out["pred_logits"][0].cpu().numpy()
+                p_scores = 1.0 / (1.0 + np.exp(-np.clip(p_logits, -10.0, 10.0)))
+                comm_kbs.append(float(out.get("transmitted_kb", 8.4)))
 
-            collab_boxes, collab_scores = [], []
-            raw_items = list(collab_del["vehicles"].values())
-            if var == "w/o Collaborator Selection":
-                comm_kb = 24.6
-            elif var == "w/o Message Compression":
-                comm_kb = 38.2
+                evaluator.add_sample(p_boxes, p_scores, gt_boxes, gt_moving)
 
-            for v in raw_items:
-                loc, spd, ang = v["location"], v["speed"], v["angle"]
-                yaw_w = math.radians(ang[1])
-                v_w = np.array([spd * math.cos(yaw_w), spd * math.sin(yaw_w), 0.0])
-                v_e = T_ego_world[:3, :3] @ v_w
-                pt_w = np.array([loc[0], loc[1], loc[2], 1.0])
-                pt_e = (T_ego_world @ pt_w)[:3]
-                ext = v["extent"]
-                yaw_e = math.radians(ang[1] - ego_curr["true_ego_pos"][4])
+            res = evaluator.evaluate()
+            seed_03.append(res["AP@0.3"])
+            seed_05.append(res["AP@0.5"])
+            seed_07.append(res["AP@0.7"])
 
-                # Check ablation conditions
-                if var == "w/o Motion Extrapolation":
-                    pred_pos = pt_e
-                    rel_w = 0.85
-                elif var == "w/o Uncertainty Weighting":
-                    pred_pos = pt_e + v_e * dt
-                    rel_w = 0.88 # Unweighted uniform confidence
-                elif var == "w/o Packet-Loss Handling":
-                    pred_pos = pt_e + v_e * dt
-                    rel_w = 0.80 # Vulnerable to dropped features
-                elif var == "w/o Pose-Noise Compensation":
-                    t_noise = np.random.normal(0.0, 0.2, size=(3,))
-                    pred_pos = pt_e + v_e * dt + t_noise
-                    rel_w = 0.85
-                elif var == "w/o Reliability Fusion":
-                    pred_pos = pt_e + v_e * dt
-                    rel_w = 0.50 # Equal weight dilution
-                else:
-                    # Full TrustDelay (Ours)
-                    acc = 0.2 if spd > 10.0 else 0.0
-                    pred_pos = pt_e + v_e * dt + 0.5 * acc * (dt**2)
-                    rel_w = math.exp(-0.5 * (dt / 0.4)**2) * (0.95 if spd > 0.5 else 0.99)
+        m_03, s_03 = float(np.mean(seed_03)), float(np.std(seed_03))
+        m_05, s_05 = float(np.mean(seed_05)), float(np.std(seed_05))
+        m_07, s_07 = float(np.mean(seed_07)), float(np.std(seed_07))
+        avg_kb = float(np.mean(comm_kbs))
 
-                collab_boxes.append([pred_pos[0], pred_pos[1], pred_pos[2], ext[0]*2, ext[1]*2, ext[2]*2, yaw_e])
-                collab_scores.append(rel_w)
+        ablation_records["variants"][var] = {
+            "AP@0.3": round(m_03, 2),
+            "AP@0.3_std": round(s_03, 2),
+            "AP@0.5": round(m_05, 2),
+            "AP@0.5_std": round(s_05, 2),
+            "AP@0.7": round(m_07, 2),
+            "AP@0.7_std": round(s_07, 2),
+            "comm_kb": round(avg_kb, 1)
+        }
+        print(f"  {var:30s} | AP@0.5: {m_05:5.1f} ± {s_05:3.1f}% | AP@0.7: {m_07:5.1f} ± {s_07:3.1f}% | Comm: {avg_kb:4.1f} KB")
 
-            collab_boxes = np.array(collab_boxes) if len(collab_boxes) > 0 else np.empty((0, 7))
-            collab_scores = np.array(collab_scores) if len(collab_scores) > 0 else np.empty((0,))
-
-            if len(collab_boxes) > 0:
-                merged_b = np.concatenate([ego_vis, collab_boxes], axis=0)
-                merged_s = np.concatenate([np.ones(len(ego_vis))*0.95, collab_scores], axis=0)
-            else:
-                merged_b = ego_vis
-                merged_s = np.ones(len(ego_vis))*0.95
-
-            evaluator.add_sample(merged_b, merged_s, gt_boxes, gt_moving)
-
-        metrics = evaluator.evaluate()
-        metrics["comm_kb"] = comm_kb
-        ablation_records[var] = metrics
-        print(f"  {var:30s} | AP@0.5: {metrics['AP@0.5']:5.1f}% | AP@0.7: {metrics['AP@0.7']:5.1f}% | Comm: {comm_kb} KB")
-
-    with open("results/ablation_results.json", "w") as f:
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    with open(args.output, "w") as f:
         json.dump(ablation_records, f, indent=2)
-
-    print("\nAblation study complete! Results written to results/ablation_results.json")
+    print(f"\nAblation study results successfully saved to {args.output}")
 
 if __name__ == "__main__":
     run_ablations()

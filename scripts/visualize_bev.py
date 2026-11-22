@@ -1,16 +1,19 @@
 """
 Qualitative BEV Visualization Generator for TrustDelay.
-Produces publication-grade multi-panel comparisons:
+Produces publication-grade multi-panel comparisons from REAL detector outputs on real frames:
   (a) Ground Truth & Cooperative V2V Context
-  (b) Ego-Only Perception (Severe Line-of-Sight Occlusions)
-  (c) Uncompensated Asynchronous Baseline (400 ms Latency Ghosting)
-  (d) TrustDelay (Uncertainty-Aware Extrapolated & Reliability-Fused)
+  (b) Real Ego-Only Perception (model forward with fusion_type='ego_only')
+  (c) Real Uncompensated Asynchronous Baseline (400 ms Latency, extrapolation_mode='none', fusion_type='uniform')
+  (d) Real TrustDelay (400 ms Latency, extrapolation_mode='learned', fusion_type='reliability_gated')
   + Inset Callout Micro-Analysis of Moving Vehicle Latency Correction.
+All bounding boxes come directly from neural network inference on real sensor data.
 """
+from __future__ import annotations
 import os
 import sys
 import math
 import numpy as np
+import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -21,6 +24,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from configs.config import TrustDelayConfig
 from src.data.opv2v_dataset import OPV2VAsynchronousDataset
+from src.models.trust_delay_model import TrustDelayModel
 
 def draw_bev_box(ax, cx, cy, dx, dy, yaw, color, edgecolor, linewidth=1.5, linestyle="-", alpha=0.9, label=None):
     """Draws an oriented 2D bounding box on a BEV matplotlib axis."""
@@ -47,30 +51,55 @@ def draw_bev_box(ax, cx, cy, dx, dy, yaw, color, edgecolor, linewidth=1.5, lines
         alpha=alpha, length_includes_head=True, zorder=5
     )
 
-def generate_qualitative_figure():
+def generate_qualitative_figure(checkpoint_path: str = "results/checkpoints/trustdelay_best.pth"):
     cfg = TrustDelayConfig()
-    dataset = OPV2VAsynchronousDataset(cfg, split="validate", delay_ms=400)
-    sample = dataset[0]
+    device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
 
-    gt_boxes = sample["gt_boxes"].numpy()       # (M, 7) [cx, cy, cz, dx, dy, dz, yaw]
-    gt_speeds = sample["gt_speeds"].numpy()     # (M,)
-    gt_is_moving = sample["gt_is_moving"].numpy() # (M,)
+    # Load model
+    model = TrustDelayModel(cfg).to(device)
+    if os.path.exists(checkpoint_path):
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device, weights_only=True))
+        print(f"Loaded model checkpoint from {checkpoint_path}")
+    model.eval()
+
+    dataset = OPV2VAsynchronousDataset(cfg, split="test", delay_ms=400)
+    # Pick a frame with dynamic objects
+    sample = dataset[5] if len(dataset) > 5 else dataset[0]
+
+    gt_boxes = sample["gt_boxes"].numpy()          # (M, 7) [cx, cy, cz, dx, dy, dz, yaw]
+    gt_speeds = sample["gt_speeds"].numpy()        # (M,)
+    gt_is_moving = sample["gt_is_moving"].numpy()  # (M,)
     collabs = sample["collabs"]
-    collab_pos = collabs[0]["T_ego_collab"][:2, 3]
+    collab_pos = collabs[0]["T_ego_collab"][:2, 3] if collabs else np.array([20.0, 10.0])
 
     delay_ms = 400.0
-    delay_sec = delay_ms / 1000.0
+
+    # Real neural network predictions
+    with torch.no_grad():
+        out_ego = model(sample, fusion_type="ego_only")
+        out_uncomp = model(sample, delay_override_ms=delay_ms, extrapolation_mode="none", fusion_type="uniform")
+        out_ours = model(sample, delay_override_ms=delay_ms, extrapolation_mode="learned", fusion_type="reliability_gated")
+
+    def filter_preds(out_dict, thresh=0.25):
+        boxes = out_dict["pred_boxes"][0].cpu().numpy()
+        logits = out_dict["pred_logits"][0].cpu().numpy()
+        scores = 1.0 / (1.0 + np.exp(-np.clip(logits, -10.0, 10.0)))
+        mask = scores > thresh
+        return boxes[mask], scores[mask]
+
+    ego_p_boxes, ego_p_scores = filter_preds(out_ego, thresh=0.30)
+    uncomp_p_boxes, uncomp_p_scores = filter_preds(out_uncomp, thresh=0.25)
+    ours_p_boxes, ours_p_scores = filter_preds(out_ours, thresh=0.25)
+
+    print(f"Predictions: Ego={len(ego_p_boxes)}, Uncomp={len(uncomp_p_boxes)}, TrustDelay={len(ours_p_boxes)}")
 
     # Clean publication styling
-    plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
     fig, axes = plt.subplots(1, 4, figsize=(24, 6.5), dpi=300)
     fig.subplots_adjust(wspace=0.15, top=0.88, bottom=0.12, left=0.03, right=0.98)
 
-    # Synthetic road background grid / lanes
     def draw_background(ax):
         ax.set_facecolor("#0f141d")
         ax.grid(color="#212a3a", linestyle="--", linewidth=0.6, alpha=0.7)
-        # Road lane lines
         for y in [-18, -12, -6, 0, 6, 12, 18]:
             ax.axhline(y, color="#2d3748", linestyle=":", linewidth=1.0, alpha=0.5)
         # Ego sensor FOV cone
@@ -86,27 +115,7 @@ def generate_qualitative_figure():
         draw_bev_box(ax, cx, cy, 4.8, 2.1, math.atan2(cy, cx), color="#a855f7", edgecolor="#c084fc", linewidth=2.0)
         ax.plot(cx, cy, marker="o", markersize=8, color="#c084fc", zorder=10)
         ax.text(cx, cy + 3.5, "V2V Collab", color="#c084fc", fontweight="bold", fontsize=10, ha="center")
-
-        # V2V Wireless link
         ax.plot([0, cx], [0, cy], color="#c084fc", linestyle="--", linewidth=1.5, alpha=0.6, zorder=4)
-        ax.text((cx)/2, (cy)/2 + 2, f"V2V Channel (Delay={int(delay_ms)}ms)", color="#d8b4fe", fontsize=8.5, ha="center", style="italic")
-
-    # Select high-speed dynamic vehicle for callout
-    moving_indices = np.where(gt_is_moving & (gt_speeds > 8.0))[0]
-    target_idx = moving_indices[0] if len(moving_indices) > 0 else 0
-    t_box = gt_boxes[target_idx]
-    t_speed = gt_speeds[target_idx]
-    t_yaw = t_box[6]
-
-    # Stale delayed position (traveled distance = speed * delay_sec)
-    disp_x = t_speed * delay_sec * math.cos(t_yaw)
-    disp_y = t_speed * delay_sec * math.sin(t_yaw)
-    stale_cx = t_box[0] - disp_x
-    stale_cy = t_box[1] - disp_y
-
-    # Extrapolated position with small learned residual uncertainty
-    extrap_cx = stale_cx + disp_x + np.random.normal(0, 0.2)
-    extrap_cy = stale_cy + disp_y + np.random.normal(0, 0.2)
 
     # -----------------------------------------------------------------
     # (a) Ground Truth & Multi-Agent Context
@@ -118,7 +127,7 @@ def generate_qualitative_figure():
         edge = "#22c55e" if not is_mov else "#10b981"
         face = "#15803d44"
         draw_bev_box(ax0, b[0], b[1], b[3], b[4], b[6], color=face, edgecolor=edge, linewidth=1.6)
-        if is_mov and gt_speeds[i] > 2.0:
+        if is_mov and gt_speeds[i] > 1.0:
             ax0.text(b[0], b[1] - 3.2, f"{gt_speeds[i]:.1f}m/s", color="#86efac", fontsize=8, ha="center")
 
     ax0.set_title("(a) Ground Truth & V2V Scenario", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
@@ -129,140 +138,74 @@ def generate_qualitative_figure():
     ax0.tick_params(colors="#94a3b8")
 
     # -----------------------------------------------------------------
-    # (b) Ego-Only Perception
+    # (b) Real Ego-Only Perception
     # -----------------------------------------------------------------
     ax1 = axes[1]
     draw_background(ax1)
-    for i, b in enumerate(gt_boxes):
-        dist = math.hypot(b[0], b[1])
-        # Ego detects nearby vehicles (< 24m and in line of sight)
-        if dist < 24.0 and abs(b[1]) < 16.0:
-            # Detected
-            draw_bev_box(ax1, b[0] + np.random.normal(0, 0.15), b[1] + np.random.normal(0, 0.15), b[3], b[4], b[6],
-                         color="#38bdf833", edgecolor="#38bdf8", linewidth=1.5)
-        else:
-            # Occluded / Missed (False Negative)
-            circle = patches.Circle((b[0], b[1]), radius=3.0, edgecolor="#ef4444", facecolor="#ef444422", linestyle=":", linewidth=1.8)
-            ax1.add_patch(circle)
-            ax1.text(b[0], b[1] + 3.5, "Missed\n(Occluded)", color="#f87171", fontsize=7.5, ha="center", fontweight="bold")
+    # Draw faint GT reference
+    for b in gt_boxes:
+        draw_bev_box(ax1, b[0], b[1], b[3], b[4], b[6], color="none", edgecolor="#22c55e", linewidth=0.8, linestyle="--", alpha=0.4)
+    # Real Ego detector predictions
+    for b, s in zip(ego_p_boxes, ego_p_scores):
+        draw_bev_box(ax1, b[0], b[1], b[3], b[4], b[6], color="#38bdf833", edgecolor="#38bdf8", linewidth=1.6)
+        ax1.text(b[0], b[1] + 2.5, f"{s:.2f}", color="#7dd3fc", fontsize=7.5, ha="center")
 
-    ax1.set_title("(b) Ego-Only (Severe Blind Spots)", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
+    ax1.set_title("(b) Real Ego-Only Perception", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
     ax1.set_xlim(-35, 45)
     ax1.set_ylim(-35, 25)
     ax1.set_xlabel("X (meters)", color="#cbd5e1", fontsize=10)
     ax1.tick_params(colors="#94a3b8")
 
     # -----------------------------------------------------------------
-    # (c) Uncompensated Delay Baseline (400 ms Latency)
+    # (c) Real Uncompensated Delayed Baseline (400 ms Latency)
     # -----------------------------------------------------------------
     ax2 = axes[2]
     draw_background(ax2)
-    for i, b in enumerate(gt_boxes):
-        # Ground truth faint reference
-        draw_bev_box(ax2, b[0], b[1], b[3], b[4], b[6], color="none", edgecolor="#22c55e", linewidth=0.9, linestyle="--", alpha=0.5)
+    for b in gt_boxes:
+        draw_bev_box(ax2, b[0], b[1], b[3], b[4], b[6], color="none", edgecolor="#22c55e", linewidth=0.8, linestyle="--", alpha=0.4)
+    for b, s in zip(uncomp_p_boxes, uncomp_p_scores):
+        draw_bev_box(ax2, b[0], b[1], b[3], b[4], b[6], color="#f9731633", edgecolor="#f97316", linewidth=1.6)
+        ax2.text(b[0], b[1] + 2.5, f"{s:.2f}", color="#fb923c", fontsize=7.5, ha="center")
 
-        if gt_is_moving[i]:
-            # Ghost/lagged prediction
-            cur_disp_x = gt_speeds[i] * delay_sec * math.cos(b[6])
-            cur_disp_y = gt_speeds[i] * delay_sec * math.sin(b[6])
-            ghost_x = b[0] - cur_disp_x
-            ghost_y = b[1] - cur_disp_y
-            draw_bev_box(ax2, ghost_x, ghost_y, b[3], b[4], b[6], color="#f9731633", edgecolor="#f97316", linewidth=1.8)
-            # Red dotted displacement vector showing misalignment
-            ax2.plot([ghost_x, b[0]], [ghost_y, b[1]], color="#ef4444", linestyle=":", linewidth=1.8)
-            ax2.text(ghost_x, ghost_y - 3.5, f"Ghost\n(Δt={int(delay_ms)}ms)", color="#fb923c", fontsize=7.5, ha="center", fontweight="bold")
-        else:
-            # Static vehicle correctly aligned
-            draw_bev_box(ax2, b[0], b[1], b[3], b[4], b[6], color="#f9731633", edgecolor="#f97316", linewidth=1.5)
-
-    ax2.set_title(f"(c) Uncompensated Baseline ({int(delay_ms)}ms Ghosting)", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
+    ax2.set_title(f"(c) Real Uncompensated Baseline ({int(delay_ms)}ms Delay)", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
     ax2.set_xlim(-35, 45)
     ax2.set_ylim(-35, 25)
     ax2.set_xlabel("X (meters)", color="#cbd5e1", fontsize=10)
     ax2.tick_params(colors="#94a3b8")
 
     # -----------------------------------------------------------------
-    # (d) TrustDelay (Ours: Uncertainty-Aware Extrapolation & Fusion)
+    # (d) Real TrustDelay (Learned Extrapolation & Reliability Gating)
     # -----------------------------------------------------------------
     ax3 = axes[3]
     draw_background(ax3)
-    for i, b in enumerate(gt_boxes):
-        # Ground truth reference
-        draw_bev_box(ax3, b[0], b[1], b[3], b[4], b[6], color="none", edgecolor="#22c55e", linewidth=1.0, linestyle="--", alpha=0.5)
+    for b in gt_boxes:
+        draw_bev_box(ax3, b[0], b[1], b[3], b[4], b[6], color="none", edgecolor="#22c55e", linewidth=0.8, linestyle="--", alpha=0.4)
+    for b, s in zip(ours_p_boxes, ours_p_scores):
+        draw_bev_box(ax3, b[0], b[1], b[3], b[4], b[6], color="#38bdf844", edgecolor="#38bdf8", linewidth=1.8)
+        ax3.text(b[0], b[1] + 2.5, f"{s:.2f}", color="#7dd3fc", fontsize=7.5, ha="center")
 
-        if gt_is_moving[i]:
-            # Extrapolated prediction
-            pred_x = b[0] + np.random.normal(0, 0.22)
-            pred_y = b[1] + np.random.normal(0, 0.22)
-            draw_bev_box(ax3, pred_x, pred_y, b[3], b[4], b[6], color="#38bdf844", edgecolor="#38bdf8", linewidth=1.8)
-            # Calibrated uncertainty ellipse
-            unc_ellipse = patches.Ellipse((pred_x, pred_y), width=1.8, height=1.0, angle=math.degrees(b[6]),
-                                          color="#38bdf8", alpha=0.25)
-            ax3.add_patch(unc_ellipse)
-            ax3.text(pred_x, pred_y - 3.2, f"IoU=0.82\n(σ=0.18)", color="#7dd3fc", fontsize=7.5, ha="center")
-        else:
-            draw_bev_box(ax3, b[0], b[1], b[3], b[4], b[6], color="#38bdf844", edgecolor="#38bdf8", linewidth=1.5)
-
-    ax3.set_title("(d) TrustDelay (Ours: Extrapolated & Fused)", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
+    ax3.set_title(f"(d) Real TrustDelay ({int(delay_ms)}ms Extrapolated)", color="#f8fafc", fontsize=13, fontweight="bold", pad=12)
     ax3.set_xlim(-35, 45)
     ax3.set_ylim(-35, 25)
     ax3.set_xlabel("X (meters)", color="#cbd5e1", fontsize=10)
     ax3.tick_params(colors="#94a3b8")
 
-    # -----------------------------------------------------------------
-    # Inset Zoom-in on Dynamic Moving Vehicle in Panel (d)
-    # -----------------------------------------------------------------
-    axins = inset_axes(ax3, width="38%", height="42%", loc="lower left", borderpad=1.5)
-    axins.set_facecolor("#1e293b")
-    axins.grid(True, linestyle="--", color="#334155", linewidth=0.5)
-
-    # Zoom window centered on target moving vehicle
-    zx, zy = t_box[0], t_box[1]
-    zoom_rad = 5.5
-    axins.set_xlim(zx - zoom_rad, zx + zoom_rad)
-    axins.set_ylim(zy - zoom_rad, zy + zoom_rad)
-
-    # Draw in zoom:
-    # 1. Stale position
-    draw_bev_box(axins, stale_cx, stale_cy, t_box[3], t_box[4], t_yaw, color="none", edgecolor="#f97316", linewidth=1.8, linestyle=":")
-    axins.text(stale_cx - 1.0, stale_cy - 2.8, "Stale (t-400ms)", color="#fb923c", fontsize=7, fontweight="bold")
-
-    # 2. True position at current time t
-    draw_bev_box(axins, zx, zy, t_box[3], t_box[4], t_yaw, color="#22c55e22", edgecolor="#22c55e", linewidth=2.0)
-    axins.text(zx, zy + 2.8, "Ground Truth (t)", color="#4ade80", fontsize=7.5, fontweight="bold", ha="center")
-
-    # 3. TrustDelay Extrapolated prediction
-    draw_bev_box(axins, extrap_cx, extrap_cy, t_box[3], t_box[4], t_yaw, color="#38bdf833", edgecolor="#38bdf8", linewidth=2.0)
-    axins.text(extrap_cx, extrap_cy - 2.8, "TrustDelay (Extrap)", color="#38bdf8", fontsize=7, fontweight="bold", ha="center")
-
-    # 4. Displacement arrow
-    axins.annotate(
-        "", xy=(zx, zy), xytext=(stale_cx, stale_cy),
-        arrowprops=dict(arrowstyle="->", color="#ef4444", lw=1.8, ls="--")
-    )
-    dist_lag = math.hypot(disp_x, disp_y)
-    axins.text((zx + stale_cx)/2 - 1.5, (zy + stale_cy)/2 + 0.5, f"Δs={dist_lag:.1f}m", color="#f87171", fontsize=7.5, fontweight="bold")
-
-    axins.tick_params(labelbottom=False, labelleft=False, colors="#64748b")
-    mark_inset(ax3, axins, loc1=1, loc2=2, fc="none", ec="#38bdf8", lw=1.0, linestyle="--")
-
     # Global Legend
     custom_lines = [
-        patches.Patch(facecolor="#22c55e44", edgecolor="#22c55e", label="Ground Truth (t)"),
-        patches.Patch(facecolor="#38bdf844", edgecolor="#38bdf8", label="TrustDelay (Ours)"),
-        patches.Patch(facecolor="#f9731644", edgecolor="#f97316", label="Uncompensated Delayed Baseline"),
-        patches.Patch(facecolor="none", edgecolor="#ef4444", linestyle=":", label="Missed Occlusion (Ego-Only)"),
+        patches.Patch(facecolor="#22c55e44", edgecolor="#22c55e", label="Ground Truth"),
+        patches.Patch(facecolor="#38bdf844", edgecolor="#38bdf8", label="Real Neural Predictions"),
+        patches.Patch(facecolor="#f9731644", edgecolor="#f97316", label="Uncompensated Delayed Preds"),
         plt.Line2D([0], [0], marker="*", color="#38bdf8", markersize=10, linestyle="None", label="Ego Vehicle"),
         plt.Line2D([0], [0], marker="o", color="#c084fc", markersize=8, linestyle="None", label="V2V Collaborator")
     ]
-    fig.legend(handles=custom_lines, loc="upper center", ncol=6, fontsize=11, frameon=True,
+    fig.legend(handles=custom_lines, loc="upper center", ncol=5, fontsize=11, frameon=True,
                facecolor="#1e293b", edgecolor="#334155", labelcolor="#f8fafc", bbox_to_anchor=(0.5, 0.99))
 
     os.makedirs("plots", exist_ok=True)
     out_path = "plots/fig_qualitative_bev.png"
     plt.savefig(out_path, dpi=300, bbox_inches="tight", facecolor="#090d16")
     plt.close()
-    print(f"Qualitative BEV visualization successfully generated and saved to: {out_path}")
+    print(f"Qualitative BEV visualization generated purely from neural network inference: {out_path}")
 
 if __name__ == "__main__":
     generate_qualitative_figure()

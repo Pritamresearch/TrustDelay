@@ -4,7 +4,7 @@
 - **Dataset:** OPV2V Culver City asynchronous multi-agent test sequences (90 frames, CAV 302 & 311).
 - **Hardware:** NVIDIA GeForce RTX 3050 6GB Laptop GPU (41.5 MiB peak allocated memory).
 - **Software:** PyTorch 2.5.1 + CUDA 12.1, Shapely 2.0.7 for exact rotated 2D polygon BEV IoU.
-- **Provenance:** Git commit `c08f9eee`, Evaluated on `2026-11-22 16:01:55` across seeds `[42, 43, 44]`.
+- **Provenance:** Git commit `19cfa107`, Evaluated on `2026-11-22 20:31:52` across seeds `[42, 43, 44]`.
 - **Rule of Honesty:** All metrics are 100% produced by real neural network inference on raw point cloud BEVs. Zero hardcoded scores, constants, or oracle ground truth lookups.
 
 ---
@@ -17,8 +17,8 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 | **Ego-Only** | 0.0 KB | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | +0.0% |
 | **Late Fusion** | 3.8 KB | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | +0.0% |
 | **No-Compensation Fusion** | 8.4 KB | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | +0.0% |
-| **Constant-Velocity Alignment** | 8.4 KB | 0.1% | 0.1% | 0.1% | 0.1% | 0.1% | 0.1% | -0.0% |
-| **TrustDelay (Ours)** | 8.4 KB | 0.7% | 0.9% | 0.9% | 0.9% | 0.8% | 0.8% | +0.1% |
+| **Constant-Velocity Alignment** | 8.4 KB | 0.1% | 0.1% | 0.2% | 0.1% | 0.1% | 0.1% | -0.0% |
+| **TrustDelay (Ours)** | 8.4 KB | 0.7% | 0.8% | 0.8% | 0.8% | 0.8% | 0.7% | +0.0% |
 
 ---
 
@@ -27,8 +27,8 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 | Method | 0% Loss | 10% Loss | 20% Loss | 30% Loss | 40% Loss | 50% Loss |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **No-Compensation Fusion** | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% |
-| **Constant-Velocity Alignment** | 0.1% | 0.1 ± 0.0% | 0.2 ± 0.0% | 0.2 ± 0.0% | 0.2 ± 0.0% | 0.2 ± 0.0% |
-| **TrustDelay (Ours)** | 0.9% | 0.7 ± 0.0% | 0.6 ± 0.0% | 0.4 ± 0.0% | 0.2 ± 0.0% | 0.1 ± 0.0% |
+| **Constant-Velocity Alignment** | 0.2% | 0.2 ± 0.0% | 0.2 ± 0.0% | 0.2 ± 0.1% | 0.2 ± 0.0% | 0.2 ± 0.0% |
+| **TrustDelay (Ours)** | 0.8% | 0.7 ± 0.1% | 0.5 ± 0.1% | 0.4 ± 0.0% | 0.3 ± 0.0% | 0.1 ± 0.0% |
 
 ---
 
@@ -36,11 +36,11 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 
 | Noise Level (Trans, Rot) | No-Compensation Fusion | Constant-Velocity Alignment | TrustDelay (Ours) |
 | :--- | :---: | :---: | :---: |
-| **0.0m / 0.0deg** | 0.0% | 0.1% | 0.9% |
-| **0.1m / 0.1deg** | 0.0% | 0.1% | 0.9 ± 0.0% |
-| **0.2m / 0.2deg** | 0.0% | 0.1% | 0.9 ± 0.0% |
-| **0.3m / 0.3deg** | 0.0% | 0.1 ± 0.0% | 0.8 ± 0.0% |
-| **0.5m / 0.5deg** | 0.0% | 0.1 ± 0.0% | 0.7 ± 0.0% |
+| **0.0m / 0.0deg** | 0.0% | 0.2% | 0.8% |
+| **0.1m / 0.1deg** | 0.0% | 0.2 ± 0.0% | 0.8 ± 0.0% |
+| **0.2m / 0.2deg** | 0.0% | 0.2 ± 0.0% | 0.8 ± 0.0% |
+| **0.3m / 0.3deg** | 0.0% | 0.2% | 0.7 ± 0.0% |
+| **0.5m / 0.5deg** | 0.0% | 0.2 ± 0.0% | 0.7 ± 0.0% |
 
 ---
 
@@ -48,10 +48,10 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 
 | Transmission Budget | AP@0.5 | AP@0.7 |
 | :---: | :---: | :---: |
-| **1 KB** | 2.1 ± 0.0% | 0.1 ± 0.0% |
-| **5 KB** | 10.8 ± 0.0% | 0.8 ± 0.0% |
-| **10 KB** | 12.0 ± 0.0% | 0.9 ± 0.0% |
-| **20 KB** | 13.2 ± 0.0% | 1.0 ± 0.0% |
+| **1 KB** | 2.4 ± 0.0% | 0.1 ± 0.0% |
+| **5 KB** | 9.6 ± 0.0% | 0.6 ± 0.0% |
+| **10 KB** | 11.2 ± 0.0% | 0.9 ± 0.0% |
+| **20 KB** | 13.2 ± 0.0% | 0.8 ± 0.0% |
 
 ---
 
@@ -63,7 +63,7 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 | **Late Fusion** | 0.0 ± 0.0% | 0.0 ± 0.0% |
 | **No-Compensation Fusion** | 0.0 ± 0.0% | 0.0 ± 0.0% |
 | **Constant-Velocity Alignment** | 0.1 ± 0.0% | 0.0 ± 0.0% |
-| **TrustDelay (Ours)** | 0.7 ± 0.0% | 0.3 ± 0.0% |
+| **TrustDelay (Ours)** | 0.5 ± 0.0% | 0.3 ± 0.0% |
 
 ---
 
@@ -71,17 +71,17 @@ Delays are simulated as discrete frame lags at the verified 10 Hz OPV2V recordin
 
 | Metric | Value | Measurement Protocol |
 | :--- | :---: | :--- |
-| **End-to-End Latency** | **23.70 ± 7.92 ms** | 200 iterations with `torch.cuda.Event` timing |
-| **Throughput** | **42.2 FPS** | 1000.0 / Latency (real-time: > 10 FPS) |
+| **End-to-End Latency** | **16.86 ± 4.76 ms** | 200 iterations with `torch.cuda.Event` timing |
+| **Throughput** | **59.3 FPS** | 1000.0 / Latency (real-time: > 10 FPS) |
 | **Peak GPU Memory** | **41.5 MiB** | `torch.cuda.max_memory_allocated()` |
 | **Payload Size** | **18.4 KB / frame** | FP16 serialized query tokens |
 | **Profiling Hardware** | **NVIDIA GeForce RTX 3050 6GB Laptop GPU** | PyTorch 2.5.1 + CUDA 12.1 (Batch size 1) |
 
 #### Per-Module Latency Breakdown (Mean over 200 CUDA iterations)
-- **Ego BEV Backbone & Stem:** `4.01 ms`
-- **Collaborator Processing & Motion Extrapolator:** `10.66 ms`
-- **Bandwidth Selector & Pruning:** `1.90 ms`
-- **Reliability-Weighted Cross-Attention Fusion:** `8.29 ms`
+- **Ego BEV Backbone & Stem:** `3.36 ms`
+- **Collaborator Processing & Motion Extrapolator:** `7.59 ms`
+- **Bandwidth Selector & Pruning:** `1.35 ms`
+- **Reliability-Weighted Cross-Attention Fusion:** `5.90 ms`
 
 ---
 

@@ -93,6 +93,9 @@ def run_ablations():
     pose_trans = 0.1
     pose_rot = 0.1
 
+    # Ensure dataset is loaded with true re-timed 300 ms frame lag (m = 3 frames)
+    test_dataset.set_delay_ms(int(delay_ms))
+
     print("\n--- Running 8-Variant Ablation Suite at 300 ms Delay ---")
     for var in variants:
         seed_03 = []

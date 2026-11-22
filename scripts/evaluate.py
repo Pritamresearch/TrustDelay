@@ -375,7 +375,9 @@ def run_evaluation():
     for d in delays:
         benchmark_records["delay_sweep"][str(d)] = {}
         benchmark_records["delay_sweep"][str(d)]["Ego-Only"] = ego_metrics
-        print(f"\nDelay = {d} ms:", flush=True)
+        # Set true re-timed frame delay in dataset (frame lag m = d // 100)
+        test_dataset.set_delay_ms(d)
+        print(f"\nDelay = {d} ms (True Frame Lag: m = {d // 100}):", flush=True)
         print(f"  {'Ego-Only':28s} | AP@0.5: {ego_metrics['AP@0.5']:5.1f}% | AP@0.7: {ego_metrics['AP@0.7']:5.1f}% | Comm:  0.0 KB (precomputed)", flush=True)
 
         for method in tqdm(collab_methods, desc=f"  Delay {d}ms", ncols=85, leave=False):
@@ -420,6 +422,7 @@ def run_evaluation():
     # Stochastic: Evaluated across all 3 seeds
     # -------------------------------------------------------------
     print("\n--- 2. Evaluating Packet Loss Robustness (0% - 50%) at 200ms Delay over 3 seeds ---")
+    test_dataset.set_delay_ms(200)
     methods_stress = ["No-Compensation Fusion", "Constant-Velocity Alignment", "TrustDelay (Ours)"]
     for p_loss in packet_losses:
         tag = f"{int(p_loss * 100)}%"
@@ -473,6 +476,7 @@ def run_evaluation():
     # Stochastic: Evaluated across all 3 seeds
     # -------------------------------------------------------------
     print("\n--- 3. Evaluating Pose Noise Robustness at 200ms Delay over 3 seeds ---")
+    test_dataset.set_delay_ms(200)
     for trans_m, rot_deg in pose_noise_levels:
         tag = f"{trans_m:.1f}m / {rot_deg:.1f}deg"
         benchmark_records["pose_noise_sweep"][tag] = {}
@@ -524,6 +528,7 @@ def run_evaluation():
     # 4. Bandwidth Budget Sweep at 200 ms Delay (Deterministic)
     # -------------------------------------------------------------
     print("\n--- 4. Evaluating Bandwidth Budget Sweep at 200ms Delay ---")
+    test_dataset.set_delay_ms(200)
     for b_kb in bandwidth_budgets:
         tag = f"{int(b_kb)} KB"
         evaluator.reset()
@@ -560,6 +565,7 @@ def run_evaluation():
     # 5. Dynamic Motion Breakdown (Moving vs Stationary at 300 ms Delay)
     # -------------------------------------------------------------
     print("\n--- 5. Dynamic Motion Breakdown (Moving vs Stationary at 300 ms) ---")
+    test_dataset.set_delay_ms(300)
     all_methods = ["Ego-Only"] + collab_methods
     for method in all_methods:
         evaluator.reset()

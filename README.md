@@ -18,7 +18,7 @@ Official PyTorch implementation and research manuscript for **TrustDelay**, a un
 Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermediate fusion achieves only 1.6% AP@0.5 (0.0% AP@0.7). **TrustDelay consistently achieves 10.0%–11.5% AP@0.5 and 0.7%–0.9% AP@0.7 (+5.2% to +6.8% AP@0.5 over Constant-Velocity Alignment, and ~10× higher precision than Ego-Only at 1.1%)** while transmitting only **8.4 KB/frame**.
 
 <p align="center">
-  <img src="./plots/fig_delay_robustness.png" width="90%" alt="Detection Robustness under Asynchronous Delay on OPV2V">
+  <img src="plots/fig_delay_robustness.png" width="90%" alt="Detection Robustness under Asynchronous Delay on OPV2V">
 </p>
 
 ---
@@ -26,8 +26,8 @@ Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermed
 ### B. Bandwidth-Accuracy Trade-off & Wireless Packet Loss Resilience
 
 <p align="center">
-  <img src="./plots/fig_bandwidth_pareto.png" width="48%" alt="Accuracy vs Bandwidth Pareto Frontier" />
-  <img src="./plots/fig_packet_loss.png" width="48%" alt="Resilience to Packet Drop Channels" />
+  <img src="plots/fig_bandwidth_pareto.png" width="48%" alt="Accuracy vs Bandwidth Pareto Frontier" />
+  <img src="plots/fig_packet_loss.png" width="48%" alt="Resilience to Packet Drop Channels" />
 </p>
 
 * **Accuracy vs. Bandwidth Pareto Curve (Left):** Under strict byte budgets, TrustDelay scales from **2.1% AP@0.5 at 1 KB** up to **10.8% at 5 KB, 12.0% at 10 KB, and 13.2% at 20 KB**, establishing clear bandwidth-accuracy trade-offs on edge CAV networks.
@@ -38,8 +38,8 @@ Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermed
 ### C. Dynamic Motion Breakdown & Component Ablations
 
 <p align="center">
-  <img src="./plots/fig_dynamic_motion.png" width="48%" alt="Moving vs Stationary Vehicle Breakdown" />
-  <img src="./plots/fig_ablation_study.png" width="48%" alt="Component-Wise Ablation Study" />
+  <img src="plots/fig_dynamic_motion.png" width="48%" alt="Moving vs Stationary Vehicle Breakdown" />
+  <img src="plots/fig_ablation_study.png" width="48%" alt="Component-Wise Ablation Study" />
 </p>
 
 * **Dynamic Object Extrapolation (Left):** Under 300 ms latency, TrustDelay achieves **0.7% AP@0.7 on moving vehicles** and **0.3% on stationary vehicles**, whereas constant-velocity alignment drops to 0.1% moving and 0.0% stationary due to unmitigated velocity noise causing artificial drift.
@@ -50,7 +50,7 @@ Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermed
 ### D. Qualitative BEV Detection Visualizations under 400 ms Latency
 
 <p align="center">
-  <img src="./plots/fig_qualitative_bev.png" width="98%" alt="Qualitative BEV Object Detection Comparison under 400ms Asynchronous Delay" />
+  <img src="plots/fig_qualitative_bev.png" width="98%" alt="Qualitative BEV Object Detection Comparison under 400ms Asynchronous Delay" />
 </p>
 
 * **Panel (a) Ground Truth & Cooperative V2V Context:** Real multi-agent scene with Ego and connected collaborator vehicles on OPV2V test split.
@@ -63,8 +63,8 @@ Under communication latency ($\Delta t \in [0, 500]$ ms), uncompensated intermed
 ### E. Localization Noise Robustness & Interpretability Gating Landscape
 
 <p align="center">
-  <img src="./plots/fig_pose_noise.png" width="48%" alt="Detection Robustness to GPS and IMU Noise" />
-  <img src="./plots/fig_reliability_heatmap.png" width="48%" alt="Learned Reliability Weight and Utility Heatmap" />
+  <img src="plots/fig_pose_noise.png" width="48%" alt="Detection Robustness to GPS and IMU Noise" />
+  <img src="plots/fig_reliability_heatmap.png" width="48%" alt="Learned Reliability Weight and Utility Heatmap" />
 </p>
 
 * **Pose Noise Robustness (Left):** Under GPS translation noise ($\sigma_{trans} \le 0.5$ m) and IMU heading error ($\sigma_{rot} \le 0.5^\circ$), TrustDelay retains **10.2% AP@0.5 and 0.7% AP@0.7**, maintaining robust detection despite localization errors.

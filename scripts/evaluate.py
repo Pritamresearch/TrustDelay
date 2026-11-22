@@ -41,8 +41,8 @@ def get_git_commit() -> str:
     except Exception:
         return "unknown"
 
-def run_nms(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.2) -> Tuple[np.ndarray, np.ndarray]:
-    """Simple 2D distance-based NMS for late fusion box merging."""
+def run_nms(boxes: np.ndarray, scores: np.ndarray, dist_thresh: float = 2.5) -> Tuple[np.ndarray, np.ndarray]:
+    """Simple 2D distance-based NMS for box deduplication (threshold in meters)."""
     if len(boxes) <= 1:
         return boxes, scores
     order = np.argsort(-scores)
@@ -55,7 +55,7 @@ def run_nms(boxes: np.ndarray, scores: np.ndarray, iou_thresh: float = 0.2) -> T
         curr_box = boxes[idx]
         rem_boxes = boxes[order[1:]]
         dist = np.linalg.norm(curr_box[:2] - rem_boxes[:, :2], axis=1)
-        suppress = dist < 2.5
+        suppress = dist < dist_thresh
         order = order[1:][~suppress]
     return boxes[keep], scores[keep]
 
@@ -68,7 +68,8 @@ def evaluate_single_frame(
     packet_loss: float = 0.0,
     pose_trans: float = 0.0,
     pose_rot: float = 0.0,
-    budget_kb: float = 8.4
+    budget_kb: float = 8.4,
+    apply_nms: bool = False
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     """Runs real detector inference for a single frame under the specified method using torch.inference_mode."""
     comm_kb = 0.0
@@ -193,6 +194,10 @@ def evaluate_single_frame(
         top_idx = np.argsort(-pred_scores)[:top_k]
         pred_boxes = pred_boxes[top_idx]
         pred_scores = pred_scores[top_idx]
+
+    # Uniform Distance-Based Non-Maximum Suppression (2.5m threshold)
+    if apply_nms and len(pred_boxes) > 1:
+        pred_boxes, pred_scores = run_nms(pred_boxes, pred_scores, dist_thresh=2.5)
 
     return pred_boxes, pred_scores, float(comm_kb)
 

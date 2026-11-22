@@ -1,0 +1,313 @@
+{
+  "experiment": "E2",
+  "description": "Evaluation of retrained model with true heteroscedastic loss correspondence",
+  "git_commit": "218f7e0b37a7cc80dcac8185ce3a2d7c1288cb04",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "timestamp": "2026-11-22 21:49:33",
+  "dataset_split": "test (90 frames, Culver City)",
+  "table1_true_delay": {
+    "0": {
+      "true_frame_lag": 0,
+      "delay_ms": 0,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 6.25,
+          "AP@0.5": 0.03,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 41.6,
+          "AP@0.5": 3.37,
+          "AP@0.7": 0.09,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 43.89,
+          "AP@0.5": 11.32,
+          "AP@0.7": 0.29,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 46.36,
+          "AP@0.5": 10.84,
+          "AP@0.7": 0.41,
+          "comm_kb": 8.38
+        }
+      }
+    },
+    "100": {
+      "true_frame_lag": 1,
+      "delay_ms": 100,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 6.08,
+          "AP@0.5": 0.03,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 40.79,
+          "AP@0.5": 3.42,
+          "AP@0.7": 0.06,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 45.66,
+          "AP@0.5": 11.49,
+          "AP@0.7": 0.25,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 46.14,
+          "AP@0.5": 10.82,
+          "AP@0.7": 0.39,
+          "comm_kb": 8.38
+        }
+      }
+    },
+    "200": {
+      "true_frame_lag": 2,
+      "delay_ms": 200,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 5.98,
+          "AP@0.5": 0.03,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 41.1,
+          "AP@0.5": 3.44,
+          "AP@0.7": 0.11,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 45.56,
+          "AP@0.5": 11.29,
+          "AP@0.7": 0.31,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 46.2,
+          "AP@0.5": 10.4,
+          "AP@0.7": 0.4,
+          "comm_kb": 8.38
+        }
+      }
+    },
+    "300": {
+      "true_frame_lag": 3,
+      "delay_ms": 300,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 5.36,
+          "AP@0.5": 0.03,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 41.67,
+          "AP@0.5": 3.46,
+          "AP@0.7": 0.09,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 43.66,
+          "AP@0.5": 11.2,
+          "AP@0.7": 0.33,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 47.09,
+          "AP@0.5": 10.15,
+          "AP@0.7": 0.4,
+          "comm_kb": 8.38
+        }
+      }
+    },
+    "400": {
+      "true_frame_lag": 4,
+      "delay_ms": 400,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 4.99,
+          "AP@0.5": 0.02,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 41.59,
+          "AP@0.5": 3.65,
+          "AP@0.7": 0.09,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 44.27,
+          "AP@0.5": 11.13,
+          "AP@0.7": 0.35,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 47.15,
+          "AP@0.5": 9.95,
+          "AP@0.7": 0.32,
+          "comm_kb": 8.38
+        }
+      }
+    },
+    "500": {
+      "true_frame_lag": 5,
+      "delay_ms": 500,
+      "methods": {
+        "Ego-Only": {
+          "AP@0.3": 6.06,
+          "AP@0.5": 0.07,
+          "AP@0.7": 0.0,
+          "comm_kb": 0.0
+        },
+        "Late Fusion": {
+          "AP@0.3": 4.86,
+          "AP@0.5": 0.03,
+          "AP@0.7": 0.0,
+          "comm_kb": 3.78
+        },
+        "No-Compensation Fusion": {
+          "AP@0.3": 41.56,
+          "AP@0.5": 3.69,
+          "AP@0.7": 0.09,
+          "comm_kb": 8.38
+        },
+        "Constant-Velocity Alignment": {
+          "AP@0.3": 43.72,
+          "AP@0.5": 11.04,
+          "AP@0.7": 0.3,
+          "comm_kb": 8.38
+        },
+        "TrustDelay (Ours)": {
+          "AP@0.3": 47.54,
+          "AP@0.5": 10.43,
+          "AP@0.7": 0.35,
+          "comm_kb": 8.38
+        }
+      }
+    }
+  },
+  "table2_ablations": {
+    "Full TrustDelay (Ours)": {
+      "AP@0.3": 47.7,
+      "AP@0.3_std": 0.72,
+      "AP@0.5": 10.2,
+      "AP@0.5_std": 0.08,
+      "AP@0.7": 0.35,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Motion Extrapolation": {
+      "AP@0.3": 41.75,
+      "AP@0.3_std": 0.54,
+      "AP@0.5": 2.9,
+      "AP@0.5_std": 0.05,
+      "AP@0.7": 0.08,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Uncertainty Weighting": {
+      "AP@0.3": 45.81,
+      "AP@0.3_std": 0.54,
+      "AP@0.5": 11.13,
+      "AP@0.5_std": 0.29,
+      "AP@0.7": 0.42,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Packet-Loss Handling": {
+      "AP@0.3": 47.7,
+      "AP@0.3_std": 0.72,
+      "AP@0.5": 10.2,
+      "AP@0.5_std": 0.08,
+      "AP@0.7": 0.35,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Pose-Noise Compensation": {
+      "AP@0.3": 47.63,
+      "AP@0.3_std": 0.69,
+      "AP@0.5": 10.25,
+      "AP@0.5_std": 0.13,
+      "AP@0.7": 0.35,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Collaborator Selection": {
+      "AP@0.3": 47.7,
+      "AP@0.3_std": 0.72,
+      "AP@0.5": 10.2,
+      "AP@0.5_std": 0.08,
+      "AP@0.7": 0.35,
+      "AP@0.7_std": 0.02,
+      "comm_kb": 8.4
+    },
+    "w/o Message Compression": {
+      "AP@0.3": 47.08,
+      "AP@0.3_std": 0.45,
+      "AP@0.5": 11.31,
+      "AP@0.5_std": 0.2,
+      "AP@0.7": 0.43,
+      "AP@0.7_std": 0.0,
+      "comm_kb": 15.1
+    },
+    "w/o Reliability Fusion": {
+      "AP@0.3": 44.39,
+      "AP@0.3_std": 0.5,
+      "AP@0.5": 11.42,
+      "AP@0.5_std": 0.25,
+      "AP@0.7": 0.36,
+      "AP@0.7_std": 0.01,
+      "comm_kb": 8.4
+    }
+  },
+  "unc_gate_comparison": {
+    "before_fix": {
+      "full_ap05": 9.71,
+      "no_unc_ap05": 10.56,
+      "diff": 0.85
+    },
+    "after_fix": {
+      "full_ap05": 10.2,
+      "no_unc_ap05": 11.13,
+      "diff": 0.93
+    },
+    "acceptance_passed": false
+  }
+}

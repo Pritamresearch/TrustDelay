@@ -75,6 +75,8 @@ class TrustDelayLoss(nn.Module):
             reg_loss = torch.tensor(0.0, device=device)
 
         # Heteroscedastic Motion Extrapolation Uncertainty Loss
+        # Supervised via true spatial correspondence between collaborator tokens and ego-frame ground-truth objects
+        # Nearest-neighbour assignment at the standard 3.0 m detection matching radius
         unc_loss = torch.tensor(0.0, device=device)
         log_var = None
         if extrap_dict is not None and "log_var" in extrap_dict:
@@ -82,14 +84,22 @@ class TrustDelayLoss(nn.Module):
         elif "log_var" in pred_dict and pred_dict["log_var"] is not None:
             log_var = pred_dict["log_var"]
 
-        if log_var is not None and pos_mask.sum() > 0:
-            k_pos = min(pos_mask.sum().item(), log_var.shape[1])
-            if k_pos > 0:
-                pos_log_var = log_var[0, :k_pos]
-                pos_diff = pos_boxes[:k_pos, :2] - matched_gts[:k_pos, :2]
-                sq_err = torch.sum(pos_diff ** 2, dim=-1, keepdim=True)
-                var = torch.exp(pos_log_var[:, :1])
-                unc_loss = torch.mean(0.5 * sq_err / torch.clamp(var, min=1e-3) + 0.5 * pos_log_var[:, :1])
+        extrap_boxes = pred_dict.get("extrapolated_boxes")
+
+        if log_var is not None and extrap_boxes is not None and extrap_boxes.shape[1] > 0 and gt_boxes.shape[0] > 0:
+            collab_centers = extrap_boxes[0, :, :2]  # (N_collab, 2)
+            c_dists = torch.cdist(collab_centers, gt_centers)  # (N_collab, M)
+            c_min_dists, c_matched_gt_idx = torch.min(c_dists, dim=1)
+
+            c_pos_mask = c_min_dists < 3.0
+            if c_pos_mask.sum() > 0:
+                matched_collab_boxes = collab_centers[c_pos_mask]
+                matched_collab_gts = gt_centers[c_matched_gt_idx[c_pos_mask]]
+                matched_log_var = log_var[0, c_pos_mask, :1]  # (K, 1)
+
+                sq_err = torch.sum((matched_collab_boxes - matched_collab_gts) ** 2, dim=-1, keepdim=True)
+                var = torch.exp(matched_log_var)
+                unc_loss = torch.mean(0.5 * sq_err / torch.clamp(var, min=1e-3) + 0.5 * matched_log_var)
 
         total_loss = (
             self.cls_weight * cls_loss +

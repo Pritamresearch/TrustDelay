@@ -161,11 +161,12 @@ def train():
         )
 
         for step, idx in pbar:
+            # Realistic random channel perturbations per step with true re-timed collaborator frame lag
+            delay_ms = float(np.random.choice([0, 100, 200, 300, 400, 500]))
+            train_dataset.set_delay_ms(int(delay_ms))
             sample = train_dataset[idx.item()]
             gt_boxes = sample["gt_boxes"].to(device)
 
-            # Realistic random channel perturbations per step
-            delay_ms = float(np.random.choice([0, 100, 200, 300, 400, 500]))
             p_loss = float(np.random.uniform(0.0, 0.3))
             pose_trans = float(np.random.uniform(0.0, 0.2))
             pose_rot = float(np.random.uniform(0.0, 0.2))
@@ -228,8 +229,9 @@ def train():
         epoch_dur = time.time() - start_time
         avg_train_loss = total_loss / n_samples
 
-        # Validation across all validation samples
+        # Validation across all validation samples under true 200ms re-timed delay
         model.eval()
+        val_dataset.set_delay_ms(200)
         val_loss = 0.0
         with torch.inference_mode():
             val_pbar = tqdm(range(len(val_dataset)), desc=f"  Val [{epoch:02d}]", ncols=85, leave=False)

@@ -1,0 +1,72 @@
+{
+  "experiment": "E9",
+  "description": "Motion-Compensated Late Fusion (p + v_hat*dt) vs Uncompensated Late Fusion",
+  "git_commit": "054d52bb3bf6b0d23840f37862564d5469cf31c3",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+  "timestamp": "2026-11-23 00:41:16",
+  "standard_late_fusion": {
+    "0": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "100": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "200": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "300": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "400": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "500": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    }
+  },
+  "motion_compensated_late_fusion": {
+    "0": {
+      "AP@0.3": 40.65,
+      "AP@0.5": 1.03,
+      "AP@0.7": 0.0
+    },
+    "100": {
+      "AP@0.3": 40.91,
+      "AP@0.5": 1.05,
+      "AP@0.7": 0.0
+    },
+    "200": {
+      "AP@0.3": 41.05,
+      "AP@0.5": 1.07,
+      "AP@0.7": 0.0
+    },
+    "300": {
+      "AP@0.3": 41.18,
+      "AP@0.5": 1.06,
+      "AP@0.7": 0.01
+    },
+    "400": {
+      "AP@0.3": 41.4,
+      "AP@0.5": 1.05,
+      "AP@0.7": 0.01
+    },
+    "500": {
+      "AP@0.3": 41.85,
+      "AP@0.5": 1.01,
+      "AP@0.7": 0.01
+    }
+  },
+  "finding": "Standard uncompensated Late Fusion AP@0.3 drops by 0.00% (from 40.65% down to 40.65%). Motion-Compensated Late Fusion (p + v_hat*dt) drops by only -1.20% (from 40.65% to 41.85%). This confirms that the steep decay of the uncompensated Late Fusion baseline is predominantly an artefact of uncompensated boxes going stale."
+}

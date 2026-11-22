@@ -31,6 +31,8 @@ def get_git_commit() -> str:
         return "unknown"
 
 def run_nms_np(boxes: np.ndarray, scores: np.ndarray, dist_thresh: float = 2.5):
+    boxes = np.asarray(boxes, dtype=np.float32)
+    scores = np.asarray(scores, dtype=np.float32)
     if len(boxes) <= 1:
         return boxes, scores
     order = np.argsort(-scores)
@@ -42,7 +44,8 @@ def run_nms_np(boxes: np.ndarray, scores: np.ndarray, dist_thresh: float = 2.5):
             break
         curr_box = boxes[idx]
         rem_boxes = boxes[order[1:]]
-        dist = np.linalg.norm(curr_box[:2] - rem_boxes[:, :2], axis=1)
+        diff = curr_box[:2] - rem_boxes[:, :2]
+        dist = np.sqrt(np.sum(diff ** 2, axis=1))
         suppress = dist < dist_thresh
         order = order[1:][~suppress]
     return boxes[keep], scores[keep]

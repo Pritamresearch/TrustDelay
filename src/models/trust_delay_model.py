@@ -69,7 +69,8 @@ class TrustDelayModel(nn.Module):
         ignore_uncertainty: bool = False,
         ignore_packet_mask: bool = False,
         ignore_pose_noise: bool = False,
-        disable_collab_selection: bool = False
+        disable_collab_selection: bool = False,
+        rank_by_score_only: bool = False
     ) -> Dict[str, Any]:
         """
         Pure neural inference pipeline.
@@ -198,7 +199,8 @@ class TrustDelayModel(nn.Module):
                 uncertainty_sigma=uncertainty_sigma,
                 budget_kb=bandwidth_budget_kb,
                 packet_loss_rate=p_loss,
-                log_vars=extrap_dict.get("log_var")
+                log_vars=extrap_dict.get("log_var"),
+                rank_by_score_only=rank_by_score_only
             )
 
             gathered_collab_feats.append(bw_res["selected_feats"])

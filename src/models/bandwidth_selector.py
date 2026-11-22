@@ -30,18 +30,23 @@ class BandwidthMessageSelector(nn.Module):
         uncertainty_sigma: torch.Tensor, # (B, N)
         budget_kb: int = 10,
         packet_loss_rate: float = 0.0,
-        log_vars: Optional[torch.Tensor] = None # (B, N, 2)
+        log_vars: Optional[torch.Tensor] = None, # (B, N, 2)
+        rank_by_score_only: bool = False
     ) -> Dict[str, torch.Tensor]:
         """
         Selects top tokens within budget and applies packet loss channel masking.
         Returns selected tokens, boxes, transmission volume, and packet mask.
+        If rank_by_score_only is True (e.g. E8 sigma-free arm), ranks purely by score c_j without sigma_j.
         """
         B, N, C = query_feats.shape
         max_tokens = max(1, min(N, int(self.compute_max_tokens_for_budget(budget_kb))))
 
         # Information utility score: high object confidence, low motion uncertainty
         # Tokens with high confidence and low uncertainty are prioritized
-        utility_score = scores * torch.exp(-0.5 * uncertainty_sigma)  # (B, N)
+        if rank_by_score_only:
+            utility_score = scores.clone()
+        else:
+            utility_score = scores * torch.exp(-0.5 * uncertainty_sigma)  # (B, N)
 
         # Select Top-K tokens according to budget
         top_utility, top_indices = torch.topk(utility_score, k=max_tokens, dim=1)

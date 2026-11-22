@@ -8,3 +8,4 @@ paper/test.*
 paper/*.aux
 paper/*.out
 paper/*.log
+results/predictions_cache/

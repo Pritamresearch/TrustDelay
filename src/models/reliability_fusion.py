@@ -125,6 +125,22 @@ class ReliabilityWeightedFusion(nn.Module):
             weights = torch.ones((B, M, 1), device=ego_queries.device) * packet_mask
         elif fusion_type == "confidence_only":
             weights = torch.exp(-0.5 * collab_sigmas) * packet_mask
+        elif fusion_type == "prior_only":
+            # E4: Pure exponential prior, drops learned MLP
+            analytic_gate = torch.exp(-1.5 * delay_sec) * torch.exp(-0.8 * collab_sigmas) * torch.exp(-0.5 * pose_noise_mag)
+            weights = (packet_mask * analytic_gate).clamp(min=0.0, max=1.0)
+        elif fusion_type == "mlp_only":
+            # E4: Pure learned MLP gate, drops exponential prior
+            inputs = torch.cat([delay_sec, collab_sigmas, packet_mask, pose_noise_mag], dim=-1)
+            learned_gate = self.reliability_gate.gate_mlp(inputs)
+            weights = (packet_mask * learned_gate).clamp(min=0.0, max=1.0)
+        elif fusion_type == "delay_only":
+            # E4: Hold sigma, delta, epsilon at nominal constants (sigma=0.5, delta=1.0, epsilon=0.0), so only Delta_t varies
+            inputs = torch.cat([delay_sec, torch.full_like(collab_sigmas, 0.5), packet_mask, torch.zeros_like(pose_noise_mag)], dim=-1)
+            analytic_gate = torch.exp(-1.5 * delay_sec) * math.exp(-0.8 * 0.5)
+            learned_gate = self.reliability_gate.gate_mlp(inputs)
+            w = packet_mask * (0.5 * learned_gate + 0.5 * analytic_gate)
+            weights = w.clamp(min=0.0, max=1.0)
         else:
             # Full TrustDelay reliability weighting
             weights = self.reliability_gate(delay_sec, collab_sigmas, packet_mask, pose_noise_mag)

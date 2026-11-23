@@ -1,9 +1,15 @@
 {
   "experiment": "E8",
   "description": "Genuinely sigma-free arm: U_j = c_j token ranking (Stage 4) and sigma removed from gate (Stage 5)",
-  "git_commit": "054d52bb3bf6b0d23840f37862564d5469cf31c3",
-  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
-  "timestamp": "2026-11-23 00:40:45",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
+  "git_commit": "8607fadcc32e1cb1b06800f3faf5f0d78c220379",
+  "split": "test",
+  "seeds": [
+    42
+  ],
+  "frame_policy": "clamp_to_first",
+  "timestamp": "2026-11-23 11:17:36",
   "full_trustdelay": {
     "0": {
       "AP@0.3": 53.35,
@@ -11,29 +17,29 @@
       "AP@0.7": 0.63
     },
     "100": {
-      "AP@0.3": 52.68,
-      "AP@0.5": 11.6,
-      "AP@0.7": 0.82
+      "AP@0.3": 52.35,
+      "AP@0.5": 11.39,
+      "AP@0.7": 0.72
     },
     "200": {
-      "AP@0.3": 52.22,
-      "AP@0.5": 11.14,
-      "AP@0.7": 0.83
-    },
-    "300": {
-      "AP@0.3": 52.17,
-      "AP@0.5": 10.77,
-      "AP@0.7": 0.84
-    },
-    "400": {
-      "AP@0.3": 51.8,
-      "AP@0.5": 10.02,
+      "AP@0.3": 50.69,
+      "AP@0.5": 10.32,
       "AP@0.7": 0.78
     },
-    "500": {
-      "AP@0.3": 51.31,
-      "AP@0.5": 9.82,
+    "300": {
+      "AP@0.3": 53.1,
+      "AP@0.5": 10.31,
+      "AP@0.7": 0.75
+    },
+    "400": {
+      "AP@0.3": 51.6,
+      "AP@0.5": 10.45,
       "AP@0.7": 0.76
+    },
+    "500": {
+      "AP@0.3": 51.92,
+      "AP@0.5": 10.25,
+      "AP@0.7": 0.66
     }
   },
   "genuinely_sigma_free": {
@@ -43,38 +49,38 @@
       "AP@0.7": 0.31
     },
     "100": {
-      "AP@0.3": 53.71,
-      "AP@0.5": 9.11,
-      "AP@0.7": 0.36
+      "AP@0.3": 52.78,
+      "AP@0.5": 9.7,
+      "AP@0.7": 0.45
     },
     "200": {
-      "AP@0.3": 53.5,
-      "AP@0.5": 10.61,
-      "AP@0.7": 0.55
+      "AP@0.3": 53.23,
+      "AP@0.5": 10.76,
+      "AP@0.7": 0.53
     },
     "300": {
-      "AP@0.3": 53.72,
-      "AP@0.5": 11.37,
+      "AP@0.3": 53.6,
+      "AP@0.5": 10.95,
       "AP@0.7": 0.68
     },
     "400": {
-      "AP@0.3": 53.71,
-      "AP@0.5": 11.34,
-      "AP@0.7": 0.61
+      "AP@0.3": 53.47,
+      "AP@0.5": 10.75,
+      "AP@0.7": 0.55
     },
     "500": {
-      "AP@0.3": 53.08,
-      "AP@0.5": 11.94,
-      "AP@0.7": 0.65
+      "AP@0.3": 53.04,
+      "AP@0.5": 11.49,
+      "AP@0.7": 0.8
     }
   },
   "differences": {
     "0": -3.66,
-    "100": -2.49,
-    "200": -0.53,
-    "300": 0.6,
-    "400": 1.32,
-    "500": 2.12
+    "100": -1.69,
+    "200": 0.44,
+    "300": 0.64,
+    "400": 0.3,
+    "500": 1.24
   },
-  "finding": "Removing sigma entirely from both Stage 4 token ranking (U_j = c_j) and Stage 5 gate yields mean difference of -0.44% AP@0.5 across the true delay sweep (range: -3.66% to +2.12%). Showing minor residual utility of variance ranking."
+  "finding": "Removing sigma entirely from both Stage 4 token ranking (U_j = c_j) and Stage 5 gate yields mean difference of -0.46% AP@0.5 across the true delay sweep (range: -3.66% to +1.24%). Showing minor residual utility of variance ranking."
 }

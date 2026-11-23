@@ -1,9 +1,15 @@
 {
   "experiment": "E9",
   "description": "Motion-Compensated Late Fusion (p + v_hat*dt) vs Uncompensated Late Fusion",
-  "git_commit": "054d52bb3bf6b0d23840f37862564d5469cf31c3",
-  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
-  "timestamp": "2026-11-23 00:41:16",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
+  "git_commit": "8607fadcc32e1cb1b06800f3faf5f0d78c220379",
+  "split": "test",
+  "seeds": [
+    42
+  ],
+  "frame_policy": "clamp_to_first",
+  "timestamp": "2026-11-23 11:18:08",
   "standard_late_fusion": {
     "0": {
       "AP@0.3": 40.65,
@@ -11,29 +17,29 @@
       "AP@0.7": 0.0
     },
     "100": {
-      "AP@0.3": 40.65,
-      "AP@0.5": 1.03,
+      "AP@0.3": 38.2,
+      "AP@0.5": 0.69,
       "AP@0.7": 0.0
     },
     "200": {
-      "AP@0.3": 40.65,
-      "AP@0.5": 1.03,
+      "AP@0.3": 33.35,
+      "AP@0.5": 0.55,
       "AP@0.7": 0.0
     },
     "300": {
-      "AP@0.3": 40.65,
-      "AP@0.5": 1.03,
-      "AP@0.7": 0.0
+      "AP@0.3": 30.42,
+      "AP@0.5": 0.62,
+      "AP@0.7": 0.01
     },
     "400": {
-      "AP@0.3": 40.65,
-      "AP@0.5": 1.03,
-      "AP@0.7": 0.0
+      "AP@0.3": 30.22,
+      "AP@0.5": 0.67,
+      "AP@0.7": 0.01
     },
     "500": {
-      "AP@0.3": 40.65,
-      "AP@0.5": 1.03,
-      "AP@0.7": 0.0
+      "AP@0.3": 29.07,
+      "AP@0.5": 0.72,
+      "AP@0.7": 0.01
     }
   },
   "motion_compensated_late_fusion": {
@@ -43,30 +49,30 @@
       "AP@0.7": 0.0
     },
     "100": {
-      "AP@0.3": 40.91,
-      "AP@0.5": 1.05,
+      "AP@0.3": 38.29,
+      "AP@0.5": 0.67,
       "AP@0.7": 0.0
     },
     "200": {
-      "AP@0.3": 41.05,
-      "AP@0.5": 1.07,
+      "AP@0.3": 33.67,
+      "AP@0.5": 0.54,
       "AP@0.7": 0.0
     },
     "300": {
-      "AP@0.3": 41.18,
-      "AP@0.5": 1.06,
-      "AP@0.7": 0.01
+      "AP@0.3": 30.78,
+      "AP@0.5": 0.61,
+      "AP@0.7": 0.0
     },
     "400": {
-      "AP@0.3": 41.4,
-      "AP@0.5": 1.05,
+      "AP@0.3": 30.05,
+      "AP@0.5": 0.65,
       "AP@0.7": 0.01
     },
     "500": {
-      "AP@0.3": 41.85,
-      "AP@0.5": 1.01,
+      "AP@0.3": 29.23,
+      "AP@0.5": 0.69,
       "AP@0.7": 0.01
     }
   },
-  "finding": "Standard uncompensated Late Fusion AP@0.3 drops by 0.00% (from 40.65% down to 40.65%). Motion-Compensated Late Fusion (p + v_hat*dt) drops by only -1.20% (from 40.65% to 41.85%). This confirms that the steep decay of the uncompensated Late Fusion baseline is predominantly an artefact of uncompensated boxes going stale."
+  "finding": "Standard uncompensated Late Fusion AP@0.3 drops by 11.58% (from 40.65% down to 29.07%). Motion-Compensated Late Fusion (p + v_hat*dt) drops by only 11.42% (from 40.65% to 29.23%). This confirms that the steep decay of the uncompensated Late Fusion baseline is predominantly an artefact of uncompensated boxes going stale."
 }

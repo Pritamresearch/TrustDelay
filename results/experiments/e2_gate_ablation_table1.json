@@ -1,9 +1,15 @@
 {
   "experiment": "E2",
-  "description": "Table I delay sweep including isolated TrustDelay w/o Gate arm",
-  "git_commit": "da228159dd50dddfe1fe6d319f3d38a0cadfca92",
-  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
-  "timestamp": "2026-11-23 00:11:11",
+  "description": "Table I delay sweep under true lag with isolated TrustDelay w/o Gate arm",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
+  "git_commit": "45aed9c51dfd6b6276e8a1a3afaf3498b66508dd",
+  "split": "test",
+  "seeds": [
+    42
+  ],
+  "frame_policy": "clamp_to_first",
+  "timestamp": "2026-11-23 10:57:39",
   "table1_post_nms_primary": {
     "0": {
       "Ego-Only": {
@@ -51,33 +57,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.65,
-        "AP@0.5": 1.03,
+        "AP@0.3": 38.2,
+        "AP@0.5": 0.69,
         "AP@0.7": 0.0,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 38.63,
+        "AP@0.3": 39.12,
         "AP@0.5": 1.54,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 48.51,
-        "AP@0.5": 4.6,
-        "AP@0.7": 0.11,
+        "AP@0.3": 48.2,
+        "AP@0.5": 4.9,
+        "AP@0.7": 0.14,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 49.29,
-        "AP@0.5": 4.49,
-        "AP@0.7": 0.1,
+        "AP@0.3": 48.28,
+        "AP@0.5": 4.77,
+        "AP@0.7": 0.12,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 52.68,
-        "AP@0.5": 11.6,
-        "AP@0.7": 0.82,
+        "AP@0.3": 52.35,
+        "AP@0.5": 11.39,
+        "AP@0.7": 0.72,
         "comm_kb": 8.4
       }
     },
@@ -89,33 +95,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.65,
-        "AP@0.5": 1.03,
+        "AP@0.3": 33.35,
+        "AP@0.5": 0.55,
         "AP@0.7": 0.0,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 38.63,
-        "AP@0.5": 1.54,
+        "AP@0.3": 39.77,
+        "AP@0.5": 1.44,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 48.58,
-        "AP@0.5": 4.48,
-        "AP@0.7": 0.12,
+        "AP@0.3": 47.84,
+        "AP@0.5": 4.79,
+        "AP@0.7": 0.2,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 49.21,
-        "AP@0.5": 4.4,
-        "AP@0.7": 0.11,
+        "AP@0.3": 47.68,
+        "AP@0.5": 4.73,
+        "AP@0.7": 0.19,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 52.22,
-        "AP@0.5": 11.14,
-        "AP@0.7": 0.83,
+        "AP@0.3": 50.69,
+        "AP@0.5": 10.32,
+        "AP@0.7": 0.78,
         "comm_kb": 8.4
       }
     },
@@ -127,33 +133,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.65,
-        "AP@0.5": 1.03,
-        "AP@0.7": 0.0,
+        "AP@0.3": 30.42,
+        "AP@0.5": 0.62,
+        "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 38.63,
-        "AP@0.5": 1.54,
+        "AP@0.3": 40.09,
+        "AP@0.5": 1.47,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 48.95,
-        "AP@0.5": 4.54,
-        "AP@0.7": 0.11,
+        "AP@0.3": 47.9,
+        "AP@0.5": 4.91,
+        "AP@0.7": 0.1,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 49.52,
-        "AP@0.5": 4.66,
-        "AP@0.7": 0.11,
+        "AP@0.3": 47.64,
+        "AP@0.5": 4.85,
+        "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 52.17,
-        "AP@0.5": 10.77,
-        "AP@0.7": 0.84,
+        "AP@0.3": 53.1,
+        "AP@0.5": 10.31,
+        "AP@0.7": 0.75,
         "comm_kb": 8.4
       }
     },
@@ -165,33 +171,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.65,
-        "AP@0.5": 1.03,
-        "AP@0.7": 0.0,
+        "AP@0.3": 30.22,
+        "AP@0.5": 0.67,
+        "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 38.63,
-        "AP@0.5": 1.54,
+        "AP@0.3": 40.38,
+        "AP@0.5": 1.47,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 48.96,
-        "AP@0.5": 4.72,
-        "AP@0.7": 0.11,
+        "AP@0.3": 47.87,
+        "AP@0.5": 5.26,
+        "AP@0.7": 0.14,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 49.24,
-        "AP@0.5": 4.87,
-        "AP@0.7": 0.11,
+        "AP@0.3": 48.11,
+        "AP@0.5": 5.29,
+        "AP@0.7": 0.12,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.8,
-        "AP@0.5": 10.02,
-        "AP@0.7": 0.78,
+        "AP@0.3": 51.6,
+        "AP@0.5": 10.45,
+        "AP@0.7": 0.76,
         "comm_kb": 8.4
       }
     },
@@ -203,33 +209,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.65,
-        "AP@0.5": 1.03,
-        "AP@0.7": 0.0,
+        "AP@0.3": 29.07,
+        "AP@0.5": 0.72,
+        "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 38.63,
-        "AP@0.5": 1.54,
+        "AP@0.3": 40.12,
+        "AP@0.5": 1.61,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 48.75,
-        "AP@0.5": 4.66,
+        "AP@0.3": 48.09,
+        "AP@0.5": 5.19,
         "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 49.32,
-        "AP@0.5": 4.7,
+        "AP@0.3": 48.27,
+        "AP@0.5": 5.27,
         "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.31,
-        "AP@0.5": 9.82,
-        "AP@0.7": 0.76,
+        "AP@0.3": 51.92,
+        "AP@0.5": 10.25,
+        "AP@0.7": 0.66,
         "comm_kb": 8.4
       }
     }
@@ -243,9 +249,9 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
-        "AP@0.7": 0.01,
+        "AP@0.3": 40.65,
+        "AP@0.5": 1.03,
+        "AP@0.7": 0.0,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
@@ -281,33 +287,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
-        "AP@0.7": 0.01,
+        "AP@0.3": 38.2,
+        "AP@0.5": 0.69,
+        "AP@0.7": 0.0,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 39.0,
-        "AP@0.5": 1.64,
+        "AP@0.3": 39.5,
+        "AP@0.5": 1.69,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 46.29,
-        "AP@0.5": 4.74,
-        "AP@0.7": 0.11,
+        "AP@0.3": 45.64,
+        "AP@0.5": 5.15,
+        "AP@0.7": 0.13,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 47.05,
-        "AP@0.5": 4.67,
-        "AP@0.7": 0.1,
+        "AP@0.3": 45.61,
+        "AP@0.5": 4.99,
+        "AP@0.7": 0.11,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.63,
-        "AP@0.5": 11.52,
-        "AP@0.7": 0.88,
+        "AP@0.3": 51.56,
+        "AP@0.5": 11.28,
+        "AP@0.7": 0.77,
         "comm_kb": 8.4
       }
     },
@@ -319,33 +325,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
-        "AP@0.7": 0.01,
+        "AP@0.3": 33.35,
+        "AP@0.5": 0.55,
+        "AP@0.7": 0.0,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 39.0,
-        "AP@0.5": 1.64,
+        "AP@0.3": 40.24,
+        "AP@0.5": 1.59,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 46.35,
-        "AP@0.5": 4.62,
-        "AP@0.7": 0.12,
+        "AP@0.3": 46.02,
+        "AP@0.5": 4.81,
+        "AP@0.7": 0.2,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 47.07,
-        "AP@0.5": 4.54,
-        "AP@0.7": 0.11,
+        "AP@0.3": 46.19,
+        "AP@0.5": 4.75,
+        "AP@0.7": 0.19,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.44,
-        "AP@0.5": 11.03,
-        "AP@0.7": 0.91,
+        "AP@0.3": 50.08,
+        "AP@0.5": 10.38,
+        "AP@0.7": 0.81,
         "comm_kb": 8.4
       }
     },
@@ -357,33 +363,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
+        "AP@0.3": 30.42,
+        "AP@0.5": 0.62,
         "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 39.0,
-        "AP@0.5": 1.64,
-        "AP@0.7": 0.01,
+        "AP@0.3": 40.53,
+        "AP@0.5": 1.59,
+        "AP@0.7": 0.0,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 46.84,
-        "AP@0.5": 4.65,
-        "AP@0.7": 0.11,
+        "AP@0.3": 45.9,
+        "AP@0.5": 5.12,
+        "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 47.41,
-        "AP@0.5": 4.74,
-        "AP@0.7": 0.11,
+        "AP@0.3": 45.82,
+        "AP@0.5": 5.02,
+        "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.52,
-        "AP@0.5": 10.66,
-        "AP@0.7": 0.93,
+        "AP@0.3": 52.72,
+        "AP@0.5": 10.3,
+        "AP@0.7": 0.78,
         "comm_kb": 8.4
       }
     },
@@ -395,33 +401,33 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
+        "AP@0.3": 30.22,
+        "AP@0.5": 0.67,
         "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 39.0,
-        "AP@0.5": 1.64,
+        "AP@0.3": 40.81,
+        "AP@0.5": 1.63,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 46.73,
-        "AP@0.5": 4.78,
-        "AP@0.7": 0.11,
+        "AP@0.3": 45.92,
+        "AP@0.5": 5.32,
+        "AP@0.7": 0.14,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 47.12,
-        "AP@0.5": 4.94,
-        "AP@0.7": 0.11,
+        "AP@0.3": 46.1,
+        "AP@0.5": 5.4,
+        "AP@0.7": 0.12,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 51.1,
-        "AP@0.5": 10.03,
-        "AP@0.7": 0.84,
+        "AP@0.3": 51.28,
+        "AP@0.5": 10.36,
+        "AP@0.7": 0.8,
         "comm_kb": 8.4
       }
     },
@@ -433,44 +439,87 @@
         "comm_kb": 0.0
       },
       "Late Fusion": {
-        "AP@0.3": 40.49,
-        "AP@0.5": 1.21,
+        "AP@0.3": 29.07,
+        "AP@0.5": 0.72,
         "AP@0.7": 0.01,
         "comm_kb": 3.8
       },
       "No-Compensation Fusion": {
-        "AP@0.3": 39.0,
-        "AP@0.5": 1.64,
+        "AP@0.3": 40.5,
+        "AP@0.5": 1.79,
         "AP@0.7": 0.01,
         "comm_kb": 8.4
       },
       "Constant-Velocity Alignment": {
-        "AP@0.3": 46.32,
-        "AP@0.5": 4.76,
+        "AP@0.3": 45.89,
+        "AP@0.5": 5.34,
         "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay w/o Gate": {
-        "AP@0.3": 47.05,
-        "AP@0.5": 4.79,
+        "AP@0.3": 45.93,
+        "AP@0.5": 5.38,
         "AP@0.7": 0.09,
         "comm_kb": 8.4
       },
       "TrustDelay (Ours)": {
-        "AP@0.3": 50.65,
-        "AP@0.5": 9.96,
-        "AP@0.7": 0.8,
+        "AP@0.3": 51.43,
+        "AP@0.5": 10.29,
+        "AP@0.7": 0.7,
         "comm_kb": 8.4
       }
     }
   },
-  "gate_advantage_deltas": {
-    "0": 6.82,
-    "100": 7.11,
-    "200": 6.74,
-    "300": 6.11,
-    "400": 5.15,
-    "500": 5.12
+  "gate_advantage_per_lag": {
+    "0": {
+      "gated_AP@0.5": 11.32,
+      "ungated_AP@0.5": 4.5,
+      "delta_AP@0.5": 6.82,
+      "gated_AP@0.3": 53.35,
+      "ungated_AP@0.3": 48.96,
+      "delta_AP@0.3": 4.39
+    },
+    "100": {
+      "gated_AP@0.5": 11.39,
+      "ungated_AP@0.5": 4.77,
+      "delta_AP@0.5": 6.62,
+      "gated_AP@0.3": 52.35,
+      "ungated_AP@0.3": 48.28,
+      "delta_AP@0.3": 4.07
+    },
+    "200": {
+      "gated_AP@0.5": 10.32,
+      "ungated_AP@0.5": 4.73,
+      "delta_AP@0.5": 5.59,
+      "gated_AP@0.3": 50.69,
+      "ungated_AP@0.3": 47.68,
+      "delta_AP@0.3": 3.01
+    },
+    "300": {
+      "gated_AP@0.5": 10.31,
+      "ungated_AP@0.5": 4.85,
+      "delta_AP@0.5": 5.46,
+      "gated_AP@0.3": 53.1,
+      "ungated_AP@0.3": 47.64,
+      "delta_AP@0.3": 5.46
+    },
+    "400": {
+      "gated_AP@0.5": 10.45,
+      "ungated_AP@0.5": 5.29,
+      "delta_AP@0.5": 5.16,
+      "gated_AP@0.3": 51.6,
+      "ungated_AP@0.3": 48.11,
+      "delta_AP@0.3": 3.49
+    },
+    "500": {
+      "gated_AP@0.5": 10.25,
+      "ungated_AP@0.5": 5.27,
+      "delta_AP@0.5": 4.98,
+      "gated_AP@0.3": 51.92,
+      "ungated_AP@0.3": 48.27,
+      "delta_AP@0.3": 3.65
+    }
   },
-  "gated_beats_ungated_all_lags": true
+  "gated_beats_ungated_all_lags_ap05": true,
+  "gated_beats_ungated_all_lags_ap03": true
 }

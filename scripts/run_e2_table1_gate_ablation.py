@@ -15,7 +15,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.utils.metrics import DetectionEvaluator
-from scripts.dump_predictions import run_nms_np
+from scripts.dump_predictions import run_nms_np, get_file_sha256
 
 CACHE_DIR = "results/predictions_cache"
 
@@ -27,7 +27,9 @@ def get_git_commit() -> str:
 
 def run_e2():
     commit = get_git_commit()
-    print(f"=== E2: Gate Ablation in Table I (Commit: {commit[:8]}) ===")
+    ckpt_path = "results/checkpoints/trustdelay_best.pth"
+    sha = get_file_sha256(ckpt_path)
+    print(f"=== E2: Gate Ablation in Table I under True Lag (Commit: {commit[:8]}) ===")
 
     gt_file = os.path.join(CACHE_DIR, "ground_truth.npz")
     gt_data = np.load(gt_file, allow_pickle=True)
@@ -48,17 +50,12 @@ def run_e2():
     ]
 
     evaluator = DetectionEvaluator(iou_thresholds=[0.3, 0.5, 0.7])
-
     table1_post_nms = {str(d): {} for d in delays}
     table1_pre_nms = {str(d): {} for d in delays}
 
     for d in delays:
         for arm_label, cache_prefix, is_static in arms:
-            if is_static:
-                fpath = os.path.join(CACHE_DIR, f"{cache_prefix}.npz")
-            else:
-                fpath = os.path.join(CACHE_DIR, f"{cache_prefix}_lag{d}.npz")
-
+            fpath = os.path.join(CACHE_DIR, f"{cache_prefix}.npz" if is_static else f"{cache_prefix}_lag{d}.npz")
             data = np.load(fpath, allow_pickle=True)
             p_boxes_all = data["pred_boxes"]
             p_scores_all = data["pred_scores"]
@@ -115,13 +112,12 @@ def run_e2():
 
     # Print Formatted Table I with Gate Ablation row (Post-NMS)
     print("\n" + "=" * 115)
-    print("TABLE I (POST-NMS): DELAY SWEEP WITH ISOLATED GATE ABLATION ('TrustDelay w/o Gate')")
+    print("TABLE I (POST-NMS PRIMARY): DELAY SWEEP WITH ISOLATED GATE ABLATION ('TrustDelay w/o Gate')")
     print("=" * 115)
     header = f"{'Method':28s} | {'Payload':7s} | " + " | ".join([f"m={m} ({d}ms)" for m, d in zip(frame_lags, delays)])
     print(header)
     print("-" * 115)
 
-    gate_deltas = {}
     for arm_label, _, _ in arms:
         row_str = f"{arm_label:28s} | "
         comm_val = table1_post_nms["0"][arm_label]["comm_kb"]
@@ -132,34 +128,66 @@ def run_e2():
             vals.append(f"{ap05:5.2f}%")
         row_str += " | ".join(vals)
         print(row_str)
-
     print("-" * 115)
 
-    # Acceptance check: does gated beat ungated at every lag?
-    print("\n--- Gate Advantage (AP@0.5 Delta: Gated TrustDelay - TrustDelay w/o Gate) ---")
-    gated_beats_ungated_all = True
-    for d, m in zip(delays, frame_lags):
-        gated_ap = table1_post_nms[str(d)]["TrustDelay (Ours)"]["AP@0.5"]
-        ungated_ap = table1_post_nms[str(d)]["TrustDelay w/o Gate"]["AP@0.5"]
-        diff = round(gated_ap - ungated_ap, 2)
-        gate_deltas[str(d)] = diff
-        status = "PASS (Gated > Ungated)" if diff > 0 else ("MATCH" if diff == 0 else "FAIL (Ungated >= Gated)")
-        if diff < 0:
-            gated_beats_ungated_all = False
-        print(f"  Delay {d:3d} ms (m={m}): Gated {gated_ap:5.2f}% vs Ungated {ungated_ap:5.2f}% -> Delta: {diff:+5.2f}% [{status}]")
+    print("\nTABLE I (PRE-NMS REFERENCE): DELAY SWEEP @ AP@0.5")
+    print("-" * 100)
+    for arm_label, _, _ in arms:
+        row_str = f"{arm_label:28s} | " + " | ".join([
+            f"{table1_pre_nms[str(d)][arm_label]['AP@0.5']:5.2f}%" for d in delays
+        ])
+        print(row_str)
+    print("-" * 100)
 
-    print(f"\nAcceptance criterion verdict: Gated beats ungated across all lags? {gated_beats_ungated_all}")
+    # Gate Advantage: Gated - Ungated for both AP@0.5 and AP@0.3
+    print("\n--- Gate Advantage (Gated TrustDelay - TrustDelay w/o Gate) ---")
+    gate_advantage = {}
+    gated_beats_ungated_all_05 = True
+    gated_beats_ungated_all_03 = True
+
+    for d, m in zip(delays, frame_lags):
+        gated_05 = table1_post_nms[str(d)]["TrustDelay (Ours)"]["AP@0.5"]
+        ungated_05 = table1_post_nms[str(d)]["TrustDelay w/o Gate"]["AP@0.5"]
+        d05 = round(gated_05 - ungated_05, 2)
+
+        gated_03 = table1_post_nms[str(d)]["TrustDelay (Ours)"]["AP@0.3"]
+        ungated_03 = table1_post_nms[str(d)]["TrustDelay w/o Gate"]["AP@0.3"]
+        d03 = round(gated_03 - ungated_03, 2)
+
+        gate_advantage[str(d)] = {
+            "gated_AP@0.5": gated_05,
+            "ungated_AP@0.5": ungated_05,
+            "delta_AP@0.5": d05,
+            "gated_AP@0.3": gated_03,
+            "ungated_AP@0.3": ungated_03,
+            "delta_AP@0.3": d03
+        }
+
+        if d05 <= 0:
+            gated_beats_ungated_all_05 = False
+        if d03 <= 0:
+            gated_beats_ungated_all_03 = False
+
+        print(f"  Delay {d:3d} ms (m={m}): dAP@0.5 = {d05:+5.2f}% ({gated_05:5.2f}% vs {ungated_05:5.2f}%), dAP@0.3 = {d03:+5.2f}% ({gated_03:5.2f}% vs {ungated_03:5.2f}%)")
+
+    print(f"\nGated beats ungated across all lags at AP@0.5: {gated_beats_ungated_all_05}")
+    print(f"Gated beats ungated across all lags at AP@0.3: {gated_beats_ungated_all_03}")
 
     artifact = {
         "experiment": "E2",
-        "description": "Table I delay sweep including isolated TrustDelay w/o Gate arm",
+        "description": "Table I delay sweep under true lag with isolated TrustDelay w/o Gate arm",
+        "checkpoint_path": ckpt_path,
+        "checkpoint_sha256": sha,
         "git_commit": commit,
-        "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+        "split": "test",
+        "seeds": [42],
+        "frame_policy": "clamp_to_first",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "table1_post_nms_primary": table1_post_nms,
         "table1_pre_nms_reference": table1_pre_nms,
-        "gate_advantage_deltas": gate_deltas,
-        "gated_beats_ungated_all_lags": gated_beats_ungated_all
+        "gate_advantage_per_lag": gate_advantage,
+        "gated_beats_ungated_all_lags_ap05": gated_beats_ungated_all_05,
+        "gated_beats_ungated_all_lags_ap03": gated_beats_ungated_all_03
     }
 
     out_file = "results/experiments/e2_gate_ablation_table1.json"

@@ -1,9 +1,17 @@
 {
   "experiment": "E5",
   "description": "Gate Advantage across Bandwidth Budgets at 200 ms True Lag",
-  "git_commit": "09395864a6cbb7532e80ed25eedd21830a9bcd98",
-  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
-  "timestamp": "2026-11-23 00:23:28",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
+  "git_commit": "c0b7822e11d76bd25bebf5674ff6039d1e35619a",
+  "split": "test",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "frame_policy": "clamp_to_first",
+  "timestamp": "2026-11-23 11:07:37",
   "operating_point": {
     "delay_ms": 200.0,
     "true_frame_lag": 2,
@@ -17,57 +25,138 @@
     "1.0": {
       "tokens": 8,
       "gated": {
-        "AP@0.3": 50.29,
-        "AP@0.5": 2.03,
-        "AP@0.7": 0.05
+        "AP@0.3": 49.26,
+        "AP@0.5": 2.27,
+        "AP@0.7": 0.05,
+        "AP@0.5_seeds": [
+          2.27,
+          2.27,
+          2.27
+        ],
+        "AP@0.3_seeds": [
+          49.26,
+          49.26,
+          49.26
+        ]
       },
       "ungated": {
-        "AP@0.3": 47.21,
+        "AP@0.3": 47.83,
         "AP@0.5": 2.88,
-        "AP@0.7": 0.06
+        "AP@0.7": 0.09,
+        "AP@0.5_seeds": [
+          2.88,
+          2.88,
+          2.88
+        ],
+        "AP@0.3_seeds": [
+          47.83,
+          47.83,
+          47.83
+        ]
       },
-      "advantage": {
-        "abs_diff_pts": -0.85,
-        "rel_advantage_pct": -29.5
+      "advantage_AP05": {
+        "abs_diff_pts": -0.61,
+        "rel_advantage_pct": -21.2
+      },
+      "advantage_AP03": {
+        "abs_diff_pts": 1.43,
+        "rel_advantage_pct": 3.0
       }
     },
     "5.0": {
       "tokens": 40,
       "gated": {
-        "AP@0.3": 53.13,
-        "AP@0.5": 10.73,
-        "AP@0.7": 0.75
+        "AP@0.3": 52.59,
+        "AP@0.5": 9.73,
+        "AP@0.7": 0.59,
+        "AP@0.5_seeds": [
+          9.73,
+          9.73,
+          9.73
+        ],
+        "AP@0.3_seeds": [
+          52.59,
+          52.59,
+          52.59
+        ]
       },
       "ungated": {
-        "AP@0.3": 47.33,
-        "AP@0.5": 5.29,
-        "AP@0.7": 0.13
+        "AP@0.3": 48.67,
+        "AP@0.5": 5.63,
+        "AP@0.7": 0.13,
+        "AP@0.5_seeds": [
+          5.63,
+          5.63,
+          5.63
+        ],
+        "AP@0.3_seeds": [
+          48.67,
+          48.67,
+          48.67
+        ]
       },
-      "advantage": {
-        "abs_diff_pts": 5.44,
-        "rel_advantage_pct": 102.8
+      "advantage_AP05": {
+        "abs_diff_pts": 4.1,
+        "rel_advantage_pct": 72.8
+      },
+      "advantage_AP03": {
+        "abs_diff_pts": 3.92,
+        "rel_advantage_pct": 8.1
       }
     },
     "8.4": {
       "tokens": 67,
       "gated": {
-        "AP@0.3": 52.22,
-        "AP@0.5": 11.14,
-        "AP@0.7": 0.83
+        "AP@0.3": 50.69,
+        "AP@0.5": 10.32,
+        "AP@0.7": 0.78,
+        "AP@0.5_seeds": [
+          10.32,
+          10.32,
+          10.32
+        ],
+        "AP@0.3_seeds": [
+          50.69,
+          50.69,
+          50.69
+        ]
       },
       "ungated": {
-        "AP@0.3": 49.21,
-        "AP@0.5": 4.4,
-        "AP@0.7": 0.11
+        "AP@0.3": 47.68,
+        "AP@0.5": 4.73,
+        "AP@0.7": 0.19,
+        "AP@0.5_seeds": [
+          4.73,
+          4.73,
+          4.73
+        ],
+        "AP@0.3_seeds": [
+          47.68,
+          47.68,
+          47.68
+        ]
       },
-      "advantage": {
-        "abs_diff_pts": 6.74,
-        "rel_advantage_pct": 153.2
+      "advantage_AP05": {
+        "abs_diff_pts": 5.59,
+        "rel_advantage_pct": 118.2
+      },
+      "advantage_AP03": {
+        "abs_diff_pts": 3.01,
+        "rel_advantage_pct": 6.3
       }
     }
   },
   "analysis": {
-    "trend_summary": "At 1.0 KB (8 tokens), gate relative advantage is -29.5%. At 8.4 KB (67 tokens), gate relative advantage is +153.2%. Relative advantage SHRINKS as budget tightens.",
-    "supports_budget_framing": false
+    "trend_summary": "At 1.0 KB (8 tokens), gate relative advantage is -21.2% (-0.61 pts). At 8.4 KB (67 tokens), gate relative advantage is +118.2% (+5.59 pts). Gate advantage persists strongly across all budgets.",
+    "abs_diffs_ap05": {
+      "1.0": -0.61,
+      "5.0": 4.1,
+      "8.4": 5.59
+    },
+    "rel_gains_ap05": {
+      "1.0": -21.2,
+      "5.0": 72.8,
+      "8.4": 118.2
+    }
   }
 }

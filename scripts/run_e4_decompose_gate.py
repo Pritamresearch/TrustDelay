@@ -61,6 +61,15 @@ def run_e4():
             data = np.load(fpath, allow_pickle=True)
             p_boxes_all = data["pred_boxes"]
             p_scores_all = data["pred_scores"]
+            gw_all = data.get("gate_weights", [])
+
+            # Compute mean gate weight w_j across all frames and tokens
+            if len(gw_all) > 0 and len(gw_all[0]) > 0:
+                mean_w = float(np.mean(np.concatenate(gw_all)))
+            elif prefix == "trustdelay_no_gate":
+                mean_w = 1.0
+            else:
+                mean_w = 0.0
 
             evaluator.reset()
             for i in range(N_frames):
@@ -81,7 +90,8 @@ def run_e4():
             results[label]["delays"][str(d)] = {
                 "AP@0.3": round(r["AP@0.3"], 2),
                 "AP@0.5": round(r["AP@0.5"], 2),
-                "AP@0.7": round(r["AP@0.7"], 2)
+                "AP@0.7": round(r["AP@0.7"], 2),
+                "mean_w_j": round(mean_w, 4)
             }
 
     # Print Formatted Table
@@ -125,6 +135,11 @@ def run_e4():
         "prior_vs_full_mean_diff": round(float(np.mean(prior_vs_full)), 2),
         "mlp_vs_full_mean_diff": round(float(np.mean(mlp_vs_full)), 2),
         "delay_only_vs_full_mean_diff": round(float(np.mean(delay_only_vs_full)), 2),
+        "scale_shift_caveat": (
+            "Note that Full Gate combines 0.5*MLP + 0.5*Prior, whereas Prior-Only and MLP-Only evaluate each "
+            "component unweighted (1.0*Prior and 1.0*MLP respectively), resulting in an intrinsic scale shift "
+            "in raw gate weight magnitudes."
+        ),
         "verdict": (
             "If Prior-Only matches or outperforms Full Gate, the physical delay decay accounts for the entire "
             "reliable admission benefit, indicating that the learned MLP gate does not provide additional utility."
@@ -134,8 +149,12 @@ def run_e4():
     artifact = {
         "experiment": "E4",
         "description": "Gate Decomposition into Prior-Only, MLP-Only, Delay-Only, and Ungated across True Lag",
+        "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+        "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
         "git_commit": commit,
-        "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+        "split": "test",
+        "seeds": [42],
+        "frame_policy": "clamp_to_first",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "results": results,
         "analysis": analysis

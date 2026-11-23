@@ -1,0 +1,190 @@
+{
+  "experiment": "E4",
+  "description": "Gate Decomposition into Prior-Only, MLP-Only, Delay-Only, and Ungated across True Lag",
+  "git_commit": "7c3d68f3aa4077b673ba653552ea86d323ddd94f",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+  "timestamp": "2026-11-23 00:21:55",
+  "results": {
+    "Full Gate (Ours)": {
+      "description": "0.5*MLP + 0.5*exp(-1.5dt)*exp(-0.8sigma)*exp(-0.5eps)",
+      "delays": {
+        "0": {
+          "AP@0.3": 53.35,
+          "AP@0.5": 11.32,
+          "AP@0.7": 0.63
+        },
+        "100": {
+          "AP@0.3": 52.68,
+          "AP@0.5": 11.6,
+          "AP@0.7": 0.82
+        },
+        "200": {
+          "AP@0.3": 52.22,
+          "AP@0.5": 11.14,
+          "AP@0.7": 0.83
+        },
+        "300": {
+          "AP@0.3": 52.17,
+          "AP@0.5": 10.77,
+          "AP@0.7": 0.84
+        },
+        "400": {
+          "AP@0.3": 51.8,
+          "AP@0.5": 10.02,
+          "AP@0.7": 0.78
+        },
+        "500": {
+          "AP@0.3": 51.31,
+          "AP@0.5": 9.82,
+          "AP@0.7": 0.76
+        }
+      }
+    },
+    "Prior-Only Gate": {
+      "description": "exp(-1.5dt)*exp(-0.8sigma)*exp(-0.5eps) (drops learned MLP)",
+      "delays": {
+        "0": {
+          "AP@0.3": 51.25,
+          "AP@0.5": 9.51,
+          "AP@0.7": 0.54
+        },
+        "100": {
+          "AP@0.3": 54.03,
+          "AP@0.5": 4.87,
+          "AP@0.7": 0.02
+        },
+        "200": {
+          "AP@0.3": 54.83,
+          "AP@0.5": 1.91,
+          "AP@0.7": 0.0
+        },
+        "300": {
+          "AP@0.3": 53.26,
+          "AP@0.5": 0.75,
+          "AP@0.7": 0.0
+        },
+        "400": {
+          "AP@0.3": 49.19,
+          "AP@0.5": 0.84,
+          "AP@0.7": 0.0
+        },
+        "500": {
+          "AP@0.3": 46.53,
+          "AP@0.5": 0.96,
+          "AP@0.7": 0.0
+        }
+      }
+    },
+    "MLP-Only Gate": {
+      "description": "Learned MLP gate only (drops physics prior)",
+      "delays": {
+        "0": {
+          "AP@0.3": 53.03,
+          "AP@0.5": 8.81,
+          "AP@0.7": 0.4
+        },
+        "100": {
+          "AP@0.3": 52.48,
+          "AP@0.5": 8.09,
+          "AP@0.7": 0.32
+        },
+        "200": {
+          "AP@0.3": 52.37,
+          "AP@0.5": 7.43,
+          "AP@0.7": 0.28
+        },
+        "300": {
+          "AP@0.3": 52.4,
+          "AP@0.5": 6.71,
+          "AP@0.7": 0.23
+        },
+        "400": {
+          "AP@0.3": 51.82,
+          "AP@0.5": 6.31,
+          "AP@0.7": 0.18
+        },
+        "500": {
+          "AP@0.3": 50.59,
+          "AP@0.5": 6.14,
+          "AP@0.7": 0.15
+        }
+      }
+    },
+    "Delay-Only Gate": {
+      "description": "Only Delta_t varies (sigma, delta, eps held at nominal constants)",
+      "delays": {
+        "0": {
+          "AP@0.3": 53.26,
+          "AP@0.5": 10.17,
+          "AP@0.7": 0.48
+        },
+        "100": {
+          "AP@0.3": 53.9,
+          "AP@0.5": 11.17,
+          "AP@0.7": 0.54
+        },
+        "200": {
+          "AP@0.3": 52.81,
+          "AP@0.5": 11.46,
+          "AP@0.7": 0.64
+        },
+        "300": {
+          "AP@0.3": 52.4,
+          "AP@0.5": 11.36,
+          "AP@0.7": 0.83
+        },
+        "400": {
+          "AP@0.3": 52.14,
+          "AP@0.5": 10.41,
+          "AP@0.7": 0.78
+        },
+        "500": {
+          "AP@0.3": 51.66,
+          "AP@0.5": 9.88,
+          "AP@0.7": 0.78
+        }
+      }
+    },
+    "Ungated (Uniform)": {
+      "description": "Uniform weights w_j = 1.0 (no gating)",
+      "delays": {
+        "0": {
+          "AP@0.3": 48.96,
+          "AP@0.5": 4.5,
+          "AP@0.7": 0.1
+        },
+        "100": {
+          "AP@0.3": 49.29,
+          "AP@0.5": 4.49,
+          "AP@0.7": 0.1
+        },
+        "200": {
+          "AP@0.3": 49.21,
+          "AP@0.5": 4.4,
+          "AP@0.7": 0.11
+        },
+        "300": {
+          "AP@0.3": 49.52,
+          "AP@0.5": 4.66,
+          "AP@0.7": 0.11
+        },
+        "400": {
+          "AP@0.3": 49.24,
+          "AP@0.5": 4.87,
+          "AP@0.7": 0.11
+        },
+        "500": {
+          "AP@0.3": 49.32,
+          "AP@0.5": 4.7,
+          "AP@0.7": 0.09
+        }
+      }
+    }
+  },
+  "analysis": {
+    "prior_vs_full_mean_diff": -7.64,
+    "mlp_vs_full_mean_diff": -3.53,
+    "delay_only_vs_full_mean_diff": -0.04,
+    "verdict": "If Prior-Only matches or outperforms Full Gate, the physical delay decay accounts for the entire reliable admission benefit, indicating that the learned MLP gate does not provide additional utility."
+  }
+}

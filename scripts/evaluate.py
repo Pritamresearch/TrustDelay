@@ -130,6 +130,91 @@ def evaluate_single_frame(
             else:
                 pred_boxes, pred_scores = ego_boxes, ego_scores
 
+    elif method == "Motion-Compensated Late Fusion":
+        with torch.inference_mode():
+            # Ego predictions
+            out_ego = model(sample, fusion_type="ego_only")
+            ego_boxes = out_ego["pred_boxes"][0].cpu().numpy()
+            ego_logits = out_ego["pred_logits"][0].cpu().numpy()
+            ego_scores = 1.0 / (1.0 + np.exp(-np.clip(ego_logits, -10.0, 10.0)))
+
+            ego_mask = ego_scores >= 0.05
+            if np.any(ego_mask):
+                ego_boxes = ego_boxes[ego_mask]
+                ego_scores = ego_scores[ego_mask]
+            else:
+                top_k = min(5, len(ego_scores))
+                top_idx = np.argsort(-ego_scores)[:top_k]
+                ego_boxes = ego_boxes[top_idx]
+                ego_scores = ego_scores[top_idx]
+
+            collabs = sample.get("collabs", [])
+            if len(collabs) > 0 and len(collabs[0]["bev_features"]) > 0:
+                c_info = collabs[0]
+                c_bev = torch.from_numpy(c_info["bev_features"]).unsqueeze(0).to(device)
+                c_feat = model.encoder(c_bev)
+                c_queries, c_local_boxes, _ = model.query_gen(c_feat)
+                c_logits = model.fusion.cls_head(c_queries).squeeze(-1)[0].cpu().numpy()
+                c_res = model.fusion.reg_head(c_queries)[0].cpu().numpy()
+                c_scores = 1.0 / (1.0 + np.exp(-np.clip(c_logits, -10.0, 10.0)))
+                c_boxes = np.hstack([
+                    c_local_boxes[0, :, :3].cpu().numpy() + c_res[:, :3],
+                    c_local_boxes[0, :, 3:6].cpu().numpy() * np.exp(np.clip(c_res[:, 3:6], -1.0, 1.0)),
+                    c_local_boxes[0, :, 6:7].cpu().numpy() + c_res[:, 6:7]
+                ])
+
+                # Extract learned velocity from motion extrapolator
+                dt_val = delay_ms / 1000.0
+                delay_sec_t = torch.tensor([[[dt_val]]], device=device)
+                init_v = torch.zeros((1, c_queries.shape[1], 1), device=device)
+                kin_inp = torch.cat([c_queries, c_local_boxes, delay_sec_t.expand(-1, c_queries.shape[1], -1), init_v, init_v, init_v, init_v], dim=-1)
+                h = model.motion_extrapolator.motion_net(kin_inp)
+                kin_preds = model.motion_extrapolator.kinematics_head(h)[0].cpu().numpy()
+                c_vx = kin_preds[:, 0]
+                c_vy = kin_preds[:, 1]
+
+                c_mask = c_scores >= 0.05
+                if np.any(c_mask):
+                    c_boxes_refined = c_boxes[c_mask]
+                    c_scores = c_scores[c_mask]
+                    c_vx = c_vx[c_mask]
+                    c_vy = c_vy[c_mask]
+                else:
+                    top_k = min(5, len(c_scores))
+                    top_idx = np.argsort(-c_scores)[:top_k]
+                    c_boxes_refined = c_boxes[top_idx]
+                    c_scores = c_scores[top_idx]
+                    c_vx = c_vx[top_idx]
+                    c_vy = c_vy[top_idx]
+
+                T_ego_collab = c_info["T_ego_collab"].copy()
+                if pose_trans > 0.0 or pose_rot > 0.0:
+                    T_ego_collab[0, 3] += np.random.normal(0.0, pose_trans)
+                    T_ego_collab[1, 3] += np.random.normal(0.0, pose_trans)
+                    r_noise = np.radians(np.random.normal(0.0, pose_rot))
+                    c_y, s_y = math.cos(r_noise), math.sin(r_noise)
+                    T_ego_collab[:2, :2] = np.array([[c_y, -s_y], [s_y, c_y]]) @ T_ego_collab[:2, :2]
+
+                pts_c = np.hstack([c_boxes_refined[:, :3], np.ones((len(c_boxes_refined), 1))])
+                pts_e = (T_ego_collab @ pts_c.T).T[:, :3]
+                yaw_offset = math.atan2(T_ego_collab[1, 0], T_ego_collab[0, 0])
+
+                # Rotate velocity vector into ego frame and extrapolate: p + v_hat * dt
+                R_ego_c = T_ego_collab[:2, :2]
+                v_collab = np.vstack([c_vx, c_vy])
+                v_ego = R_ego_c @ v_collab
+                pts_e[:, 0] += v_ego[0] * dt_val
+                pts_e[:, 1] += v_ego[1] * dt_val
+
+                c_boxes_in_ego = np.hstack([pts_e, c_boxes_refined[:, 3:6], (c_boxes_refined[:, 6] + yaw_offset)[:, None]])
+                comm_kb = float(len(c_boxes_refined) * 8 * 4 / 1024.0)
+
+                all_b = np.vstack([ego_boxes, c_boxes_in_ego])
+                all_s = np.concatenate([ego_scores, c_scores])
+                pred_boxes, pred_scores = run_nms(all_b, all_s)
+            else:
+                pred_boxes, pred_scores = ego_boxes, ego_scores
+
     elif method == "No-Compensation Fusion":
         with torch.inference_mode():
             out = model(
@@ -141,6 +226,93 @@ def evaluate_single_frame(
                 pose_noise_trans=pose_trans,
                 pose_noise_rot=pose_rot,
                 bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay w/o Gate":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="uniform",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Prior-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="prior_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay MLP-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="mlp_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Delay-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="delay_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Sigma-Free":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="reliability_gated",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb,
+                rank_by_score_only=True,
+                ignore_uncertainty=True
             )
             pred_boxes = out["pred_boxes"][0].cpu().numpy()
             pred_logits = out["pred_logits"][0].cpu().numpy()
@@ -164,6 +336,93 @@ def evaluate_single_frame(
             pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
             comm_kb = out.get("transmitted_kb", budget_kb)
 
+    elif method == "TrustDelay w/o Gate":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="uniform",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Prior-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="prior_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay MLP-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="mlp_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Delay-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="delay_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Sigma-Free":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="reliability_gated",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb,
+                rank_by_score_only=True,
+                ignore_uncertainty=True
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
     elif method == "TrustDelay (Ours)":
         with torch.inference_mode():
             out = model(
@@ -175,6 +434,93 @@ def evaluate_single_frame(
                 pose_noise_trans=pose_trans,
                 pose_noise_rot=pose_rot,
                 bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay w/o Gate":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="uniform",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Prior-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="prior_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay MLP-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="mlp_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Delay-Only":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="delay_only",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb
+            )
+            pred_boxes = out["pred_boxes"][0].cpu().numpy()
+            pred_logits = out["pred_logits"][0].cpu().numpy()
+            pred_scores = 1.0 / (1.0 + np.exp(-np.clip(pred_logits, -10.0, 10.0)))
+            comm_kb = out.get("transmitted_kb", budget_kb)
+
+    elif method == "TrustDelay Sigma-Free":
+        with torch.inference_mode():
+            out = model(
+                sample,
+                extrapolation_mode="learned",
+                fusion_type="reliability_gated",
+                delay_override_ms=delay_ms,
+                packet_loss_override=packet_loss,
+                pose_noise_trans=pose_trans,
+                pose_noise_rot=pose_rot,
+                bandwidth_budget_kb=budget_kb,
+                rank_by_score_only=True,
+                ignore_uncertainty=True
             )
             pred_boxes = out["pred_boxes"][0].cpu().numpy()
             pred_logits = out["pred_logits"][0].cpu().numpy()

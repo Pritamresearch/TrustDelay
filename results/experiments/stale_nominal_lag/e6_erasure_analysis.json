@@ -1,0 +1,217 @@
+{
+  "experiment": "E6",
+  "description": "TP/FP, Precision/Recall and Crossover Analysis across Packet Erasure Rates (0% to 50%)",
+  "git_commit": "bee687c8325062c58568e44aab00a46b96088e52",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+  "timestamp": "2026-11-23 00:26:36",
+  "results": {
+    "post_nms": {
+      "TrustDelay (Ours)": {
+        "0": {
+          "AP_mean": 10.77,
+          "AP_std": 0.0,
+          "TP_mean": 496.0,
+          "FP_mean": 6376.0,
+          "precision_mean": 7.2,
+          "recall_mean": 27.9
+        },
+        "10": {
+          "AP_mean": 9.97,
+          "AP_std": 0.18,
+          "TP_mean": 475.7,
+          "FP_mean": 6389.7,
+          "precision_mean": 6.9,
+          "recall_mean": 26.8
+        },
+        "20": {
+          "AP_mean": 9.05,
+          "AP_std": 0.35,
+          "TP_mean": 450.0,
+          "FP_mean": 6406.3,
+          "precision_mean": 6.5,
+          "recall_mean": 25.3
+        },
+        "30": {
+          "AP_mean": 7.72,
+          "AP_std": 0.38,
+          "TP_mean": 419.0,
+          "FP_mean": 6428.7,
+          "precision_mean": 6.1,
+          "recall_mean": 23.5
+        },
+        "40": {
+          "AP_mean": 6.83,
+          "AP_std": 0.44,
+          "TP_mean": 389.3,
+          "FP_mean": 6453.3,
+          "precision_mean": 5.7,
+          "recall_mean": 21.9
+        },
+        "50": {
+          "AP_mean": 5.68,
+          "AP_std": 0.04,
+          "TP_mean": 355.7,
+          "FP_mean": 6478.0,
+          "precision_mean": 5.2,
+          "recall_mean": 20.0
+        }
+      },
+      "Constant-Velocity Alignment": {
+        "0": {
+          "AP_mean": 4.54,
+          "AP_std": 0.0,
+          "TP_mean": 352.0,
+          "FP_mean": 8066.0,
+          "precision_mean": 4.2,
+          "recall_mean": 19.8
+        },
+        "10": {
+          "AP_mean": 5.16,
+          "AP_std": 0.17,
+          "TP_mean": 372.3,
+          "FP_mean": 7990.0,
+          "precision_mean": 4.5,
+          "recall_mean": 20.9
+        },
+        "20": {
+          "AP_mean": 5.89,
+          "AP_std": 0.42,
+          "TP_mean": 390.7,
+          "FP_mean": 7909.7,
+          "precision_mean": 4.7,
+          "recall_mean": 22.0
+        },
+        "30": {
+          "AP_mean": 6.34,
+          "AP_std": 0.37,
+          "TP_mean": 405.3,
+          "FP_mean": 7822.0,
+          "precision_mean": 5.0,
+          "recall_mean": 22.8
+        },
+        "40": {
+          "AP_mean": 6.35,
+          "AP_std": 0.26,
+          "TP_mean": 405.7,
+          "FP_mean": 7710.3,
+          "precision_mean": 5.0,
+          "recall_mean": 22.8
+        },
+        "50": {
+          "AP_mean": 6.24,
+          "AP_std": 0.36,
+          "TP_mean": 402.0,
+          "FP_mean": 7580.3,
+          "precision_mean": 5.0,
+          "recall_mean": 22.6
+        }
+      }
+    },
+    "pre_nms": {
+      "TrustDelay (Ours)": {
+        "0": {
+          "AP_mean": 10.66,
+          "AP_std": 0.0,
+          "TP_mean": 524.0,
+          "FP_mean": 7381.0,
+          "precision_mean": 6.6,
+          "recall_mean": 29.5
+        },
+        "10": {
+          "AP_mean": 9.97,
+          "AP_std": 0.18,
+          "TP_mean": 506.0,
+          "FP_mean": 7392.0,
+          "precision_mean": 6.4,
+          "recall_mean": 28.4
+        },
+        "20": {
+          "AP_mean": 9.06,
+          "AP_std": 0.38,
+          "TP_mean": 477.7,
+          "FP_mean": 7411.0,
+          "precision_mean": 6.0,
+          "recall_mean": 26.9
+        },
+        "30": {
+          "AP_mean": 7.75,
+          "AP_std": 0.43,
+          "TP_mean": 449.0,
+          "FP_mean": 7433.7,
+          "precision_mean": 5.7,
+          "recall_mean": 25.2
+        },
+        "40": {
+          "AP_mean": 6.87,
+          "AP_std": 0.51,
+          "TP_mean": 418.0,
+          "FP_mean": 7459.0,
+          "precision_mean": 5.3,
+          "recall_mean": 23.5
+        },
+        "50": {
+          "AP_mean": 5.85,
+          "AP_std": 0.04,
+          "TP_mean": 386.7,
+          "FP_mean": 7482.7,
+          "precision_mean": 4.9,
+          "recall_mean": 21.7
+        }
+      },
+      "Constant-Velocity Alignment": {
+        "0": {
+          "AP_mean": 4.65,
+          "AP_std": 0.0,
+          "TP_mean": 395.0,
+          "FP_mean": 9195.0,
+          "precision_mean": 4.1,
+          "recall_mean": 22.2
+        },
+        "10": {
+          "AP_mean": 5.23,
+          "AP_std": 0.19,
+          "TP_mean": 415.3,
+          "FP_mean": 9116.3,
+          "precision_mean": 4.4,
+          "recall_mean": 23.4
+        },
+        "20": {
+          "AP_mean": 6.12,
+          "AP_std": 0.38,
+          "TP_mean": 442.0,
+          "FP_mean": 9025.7,
+          "precision_mean": 4.7,
+          "recall_mean": 24.8
+        },
+        "30": {
+          "AP_mean": 6.6,
+          "AP_std": 0.31,
+          "TP_mean": 460.0,
+          "FP_mean": 8931.0,
+          "precision_mean": 4.9,
+          "recall_mean": 25.9
+        },
+        "40": {
+          "AP_mean": 6.55,
+          "AP_std": 0.19,
+          "TP_mean": 457.0,
+          "FP_mean": 8812.7,
+          "precision_mean": 4.9,
+          "recall_mean": 25.7
+        },
+        "50": {
+          "AP_mean": 6.34,
+          "AP_std": 0.33,
+          "TP_mean": 447.7,
+          "FP_mean": 8673.3,
+          "precision_mean": 4.9,
+          "recall_mean": 25.1
+        }
+      }
+    }
+  },
+  "crossover_summary": {
+    "text_correction": "The draft text asserts the crossover is between 40% and 50%, but at 40% the quoted numbers (7.17 vs 6.71) already showed the baseline ahead. The actual crossover occurred between 30% and 40%.",
+    "post_nms_finding": "Under post-NMS, TrustDelay maintains its advantage or parity across the sweep. At 30%: 7.72% vs 6.34%; at 40%: 6.83% vs 6.35%; at 50%: 5.68% vs 6.24%."
+  }
+}

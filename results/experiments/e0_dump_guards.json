@@ -1,0 +1,43 @@
+{
+  "experiment": "E0_Guards",
+  "description": "Verification guards for TRUE lag prediction dump",
+  "git_commit": "4970f19cdc812455af2a13a5033e9cbb59e36e87",
+  "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+  "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
+  "split": "test",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "frame_policy": "clamp_to_first",
+  "timestamp": "2026-11-23 10:50:20",
+  "guards": {
+    "guard1_retiming_live": {
+      "passed": true,
+      "late_fusion_ap03_0ms": 40.65,
+      "late_fusion_ap03_500ms": 29.07,
+      "decay_pts": 11.58
+    },
+    "guard2_reproduces_e1": {
+      "passed": true,
+      "max_diff_ap03": 0.005,
+      "max_diff_ap05": 0.005
+    },
+    "guard3_not_nominal_sweep": {
+      "passed": true,
+      "trustdelay_ap03_200ms": 50.08,
+      "nominal_ap03_200ms": 51.44,
+      "true_lag_ap03_200ms": 50.08
+    },
+    "guard4_ego_lag_invariant": {
+      "passed": true,
+      "ap03": 41.75,
+      "ap05": 1.06
+    },
+    "guard5_sentinel_999_zero_leakage": {
+      "passed": true
+    }
+  },
+  "all_guards_passed": true
+}

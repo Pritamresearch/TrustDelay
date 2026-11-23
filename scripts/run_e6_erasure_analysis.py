@@ -192,11 +192,30 @@ def run_e6():
     for lp, td, cv in zip(loss_pcts, td_pre, cv_pre):
         print(f"  {lp:2d}% loss: TrustDelay {td:5.2f}% vs ConstVel {cv:5.2f}% -> Diff: {td-cv:+5.2f}%")
 
+    # Determine exact crossover interval
+    last_td_lead_post = None
+    first_td_trail_post = None
+    for lp, td, cv in zip(loss_pcts, td_post, cv_post):
+        if td >= cv:
+            last_td_lead_post = lp
+        elif first_td_trail_post is None:
+            first_td_trail_post = lp
+
+    last_td_lead_pre = None
+    first_td_trail_pre = None
+    for lp, td, cv in zip(loss_pcts, td_pre, cv_pre):
+        if td >= cv:
+            last_td_lead_pre = lp
+        elif first_td_trail_pre is None:
+            first_td_trail_pre = lp
+
     crossover_summary = {
         "text_correction": (
             "The draft text asserts the crossover is between 40% and 50%, but at 40% the quoted numbers "
             "(7.17 vs 6.71) already showed the baseline ahead. The actual crossover occurred between 30% and 40%."
         ),
+        "post_nms_crossover_interval": f"{last_td_lead_post}% to {first_td_trail_post}%" if first_td_trail_post is not None else "TrustDelay leads at all tested loss rates (no crossover)",
+        "pre_nms_crossover_interval": f"{last_td_lead_pre}% to {first_td_trail_pre}%" if first_td_trail_pre is not None else "No crossover",
         "post_nms_finding": (
             f"Under post-NMS, TrustDelay maintains its advantage or parity across the sweep. "
             f"At 30%: {td_post[3]:.2f}% vs {cv_post[3]:.2f}%; at 40%: {td_post[4]:.2f}% vs {cv_post[4]:.2f}%; at 50%: {td_post[5]:.2f}% vs {cv_post[5]:.2f}%."
@@ -205,9 +224,17 @@ def run_e6():
 
     artifact = {
         "experiment": "E6",
-        "description": "TP/FP, Precision/Recall and Crossover Analysis across Packet Erasure Rates (0% to 50%)",
+        "description": "TP/FP, Precision/Recall and Crossover Analysis across Packet Erasure Rates (0% to 50%) at 200 ms True Lag",
+        "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+        "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
         "git_commit": commit,
-        "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+        "split": "test",
+        "seeds": seeds,
+        "frame_policy": "clamp_to_first",
+        "operating_point": {
+            "delay_ms": 200.0,
+            "true_frame_lag": 2
+        },
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "results": results,
         "crossover_summary": crossover_summary

@@ -143,8 +143,12 @@ def run_e3():
     artifact = {
         "experiment": "E3",
         "description": "Uniform 2.5m distance NMS comparison for primary vs preprint footnote tables",
+        "checkpoint_path": "results/checkpoints/trustdelay_best.pth",
+        "checkpoint_sha256": "37c6f2e59b75436917355e3c97c3e8c970b64d1ed6ff78f6f89006b57d0e6d58",
         "git_commit": commit,
-        "checkpoint_path": "results/checkpoints/trustdelay_best.pth (epoch-14)",
+        "split": "test",
+        "seeds": [42],
+        "frame_policy": "clamp_to_first",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "table1_post_nms_primary": post_nms_table,
         "table1_pre_nms_reference": pre_nms_table,
